@@ -71,7 +71,7 @@ const store = createStore({
           execIn: 0,
           execOut: 0,
           max: 5,
-          beats: 60,
+          beats: null,
         },
         {
           name: 'Destination',
@@ -84,7 +84,7 @@ const store = createStore({
           execIn: 0,
           execOut: 0,
           max: 1,
-          beats: 0,
+          beats: null,
         },
         {
           name: 'Start',
@@ -97,7 +97,7 @@ const store = createStore({
           execIn: 0,
           execOut: 1,
           max: 1,
-          beats: 0,
+          beats: null,
         }
       ],
     };
@@ -118,6 +118,16 @@ const store = createStore({
       return (id) => {
         return state.json.nodes.find(node => node.id == id);
       };
+    },
+    inheritedBeats(state) {
+      return (node) => {
+        let current = [node];
+        while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
+          current = state.json.nodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
+        }
+
+        return current.reduce((carry, node) => Math.max(carry, (node.beats ?? 0)), 0);
+      }
     },
   },
 

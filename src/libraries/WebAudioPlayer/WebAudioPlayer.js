@@ -132,7 +132,8 @@ class WebAudioPlayer {
 
   schedule(context) {
     const scheduling = this.playingNodes.map(node => {
-      node.start = node.start || this.calculateBeats(node);
+      node.beats = (node.beats != null ? node.beats : this.calculateBeats(node));
+      node.start = (node.start != null ? node.start : this.calculateStart(node));
       if (node.start + node.beats > this.beat && node.start <= this.beat + this.scheduleBeats) {
         node.scheduling = true;
       }
@@ -184,8 +185,17 @@ class WebAudioPlayer {
     setTimeout(() => this.schedule(context), this.interval);
   }
 
-  calculateBeats(node) {
+  calculateStart(node) {
     return this.getChainedExecNodes(node).filter(item => item.id != node.id).reduce((carry, node) => carry + node.beats, 0);
+  }
+
+  calculateBeats(node) {
+    let current = [node];
+    while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
+      current = this.playingNodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
+    }
+
+    return current.reduce((carry, node) => Math.max(carry, (node.beats ?? 0)), 0);
   }
 
   getChainedExecNodes(node) {

@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-4 p-4">
-    <audio-param :disabled="Boolean(node.audioParams.gain)" v-model="data.gain" title="Gain" :beats="node.beats" min="0" max="10" :default="1" :values="[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0, 5.0]" />
+    <audio-param :disabled="Boolean(node.audioParams.gain)" v-model="data.gain" title="Gain" :beats="data.beats" min="0" max="10" :default="1" :values="[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0, 5.0]" />
   </div>
 </template>
 
@@ -23,10 +23,10 @@
         node: {
           audioParams: {},
           data: {},
-          beats: 60,
         },
         data: {
           gain: 1,
+          beats: 60,
         },
       };
     },
@@ -36,6 +36,7 @@
       if (this.node.data) {
         this.data.gain = this.node.data.gain ?? 1;
       }
+      this.data.beats = this.$store.getters.inheritedBeats(this.node);
     },
 
     watch: {

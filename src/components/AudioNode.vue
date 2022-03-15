@@ -27,10 +27,11 @@
         </div>
       </div>
       <div class="bg-white flex w-full justify-between items-center gap-4 p-2 h-10">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2" v-if="node.beats != null">
           <form-input :id="'beats-' + node.id" :modelValue="node.beats" @mousedown.stop @touchstart.stop @update:modelValue="changeBeats" type="number" min="1" max="120" step="1" />
           <input-label value="Beats" :for="'beats-' + node.id" />
         </div>
+        <div v-else></div>
         <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="node.category != 'execution'">
           <music-note-icon class="h-5 w-5" />
         </icon-button>
@@ -107,6 +108,7 @@
           audioParams: [],
           execIn: 0,
           execOut: 0,
+          beats: null,
         },
       },
     },
