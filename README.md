@@ -1,4 +1,4 @@
-# music-maker
+# WebAudioMaker
 
 ## Project setup
 ```
