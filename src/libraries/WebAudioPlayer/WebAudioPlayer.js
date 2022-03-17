@@ -2,7 +2,7 @@ import { v4 as uuid } from 'uuid';
 
 class WebAudioPlayer {
   constructor(json) {
-    this.json = json;
+    this.original = json;
     this.playingNodes = [];
     this.playing = false;
     this.interval = 25;
@@ -13,7 +13,12 @@ class WebAudioPlayer {
     this.bpm = 120;
   }
 
+  generateJson() {
+    this.json = JSON.parse(JSON.stringify(this.original));
+  }
+
   play() {
+    this.generateJson();
     const destination = this.json.nodes.find(node => node.type == 'destination');
     if (!destination) {
       return;
@@ -23,15 +28,16 @@ class WebAudioPlayer {
   }
 
   playUpTo(id) {
+    this.generateJson();
     let node = this.json.nodes.find(node => node.id == id);
     if (node.type != 'destination') {
       const id = uuid();
-      node.outputs.push({
+      node.outputs = [{
         output: 1,
         node: id,
         type: 'inputs',
         param: 1,
-      });
+      }];
       node = {
         id,
         type: 'destination',
@@ -61,6 +67,7 @@ class WebAudioPlayer {
   }
 
   playNode(id) {
+    this.generateJson();
     const node = this.json.nodes.find(node => node.id == id);
     if (node.type != 'oscillator') {
       return;
@@ -132,9 +139,9 @@ class WebAudioPlayer {
 
   schedule(context) {
     const scheduling = this.playingNodes.map(node => {
-      node.beats = (node.beats != null ? node.beats : this.calculateBeats(node));
-      node.start = (node.start != null ? node.start : this.calculateStart(node));
-      if (node.start + node.beats > this.beat && node.start <= this.beat + this.scheduleBeats) {
+      node.beats = Number(node.beats != null ? node.beats : this.calculateBeats(node));
+      node.start = Number(node.start != null ? node.start : this.calculateStart(node));
+      if (node.start + node.beats > this.beat && node.start < this.beat + this.scheduleBeats) {
         node.scheduling = true;
       }
 
@@ -144,17 +151,18 @@ class WebAudioPlayer {
       return;
     }
     for (let node of scheduling) {
-      if (!node.object) {
+      if (!node.object || node.type == 'destination') {
         continue;
       }
       if (node.object.start && !node.started) {
-        node.object.start((node.start / this.bpm) * 60 - context.currentTime);
+        node.object.start(Math.max(0, (node.start / this.bpm) * 60 - context.currentTime));
         node.started = true;
+        node.playing = true;
         this.playing = true;
-        node.object.stop(((node.start + node.beats) / this.bpm) * 60 - context.currentTime);
+        node.object.stop(Math.max(0, ((node.start + node.beats) / this.bpm) * 60 - context.currentTime));
         node.object.onended = () => {
-          node.started = false
-          if (!this.playingNodes.some(node => node.started)) {
+          node.playing = false;
+          if (!this.playingNodes.some(node => node.playing)) {
             this.playing = false;
           }
         };
@@ -163,7 +171,7 @@ class WebAudioPlayer {
       for (let node of nodes) {
         let beat = 0;
         while (beat < this.scheduleBeats && (this.beat + beat - node.start < node.beats)) {
-          if (beat + this.beat > node.start) {
+          if (beat + this.beat >= node.start) {
             for (let param in node.data) {
               if (!Array.isArray(node.data[param])) {
                 continue;
@@ -186,16 +194,16 @@ class WebAudioPlayer {
   }
 
   calculateStart(node) {
-    return this.getChainedExecNodes(node).filter(item => item.id != node.id).reduce((carry, node) => carry + node.beats, 0);
+    return this.getChainedExecNodes(node).filter(item => item.id != node.id).reduce((carry, node) => carry + Number(node.beats), 0);
   }
 
   calculateBeats(node) {
     let current = [node];
-    while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
+    while (current.reduce((carry, node) => carry || Number(node.beats), null) == null && current.length != 0) {
       current = this.playingNodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
     }
 
-    return current.reduce((carry, node) => Math.max(carry, (node.beats ?? 0)), 0);
+    return current.reduce((carry, node) => Math.max(carry, (Number(node.beats ?? 0))), 0);
   }
 
   getChainedExecNodes(node) {
@@ -212,7 +220,7 @@ class WebAudioPlayer {
 
   getChainedOutputNodes(node) {
     let nodes = [node];
-    for (let child of node.execOut) {
+    for (let child of node.outputs) {
       const childNode = this.playingNodes.find(childNode => childNode.id == child.node);
       if (childNode && !childNode.scheduling) {
         childNode.start = node.start;

@@ -11,16 +11,13 @@
           <form-input type="number" :min="min" :max="max" :modelValue="modelValue" @update:modelValue="updateValue" />
         </input-label>
       </div>
-      <div v-else class="relative overflow-scroll bg-white w-full h-64" ref="graph">
-        <div class="min-w-full min-h-full grid" :style="{ 'grid-template-columns': 'repeat(' + beats + ', 1rem)', 'grid-template-rows': 'repeat(' + (values.length + 1) + ', 1rem)' }">
-          <template v-for="value in reversedValues" :key="value">
-            <div v-for="beat in Number(beats)" :key="beat">
-              <input type="checkbox" :checked="hasValue(value, beat)" @input="$event.target.checked ? addValue(value, beat) : removeValue(value, beat)">
-            </div>
-          </template>
-          <div v-for="beat in Number(beats)" :key="beat">
-            <span v-if="beat > 1">X</span>
-          </div>
+      <div v-else class="relative overflow-scroll bg-white w-full" ref="graph">
+        <div class="relative bg-repeat cursor-pointer" :style="{ height: values.length + 'rem', width: beats + 'rem' }" @click="toggleNote($event)" style="background-size: 1rem 1rem; background-image: radial-gradient(circle at center, transparent 0, transparent 0.3rem, rgba(0, 0, 0, 0.2) 0.3rem, rgba(0, 0, 0, 0.2) 0.4rem, transparent 0.4rem);">
+          <svg :viewBox="viewBox" :width="beats * 16" :height="values.length * 16">
+            <transition-group name="fade">
+              <circle v-for="value in arrayValue" :key="JSON.stringify(value)" :cx="(Number(value.beat) - 0.5)" :cy="(this.values.length - (this.values.indexOf(value.value) + 0.5))" r="0.25" fill="transparent" stroke-width="0.2" stroke="hsl(0, 70%, 70%)" />
+            </transition-group>
+          </svg>
         </div>
       </div>
     </div>
@@ -95,9 +92,6 @@
     },
 
     watch: {
-      value(value) {
-        this.$emit('update:modelValue', value);
-      },
       simpleToggle(value) {
         if (this.simpleMounted && value) {
           this.$emit('update:modelValue', this.default);
@@ -106,33 +100,64 @@
     },
 
     computed: {
-      reversedValues() {
-        return [...this.values].reverse();
+      viewBox() {
+        return '0 0 ' + this.beats + ' ' + this.values.length;
       },
+      arrayValue() {
+        return Array.isArray(this.modelValue) ? this.modelValue : [];
+      }
     },
 
     methods: {
-      addValue(value, beat) {
+      convertPixelsToRem(pixels) {
+        return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
+      },
+      toggleNote(event) {
+        const beat = Math.round(this.convertPixelsToRem(event.offsetX) + 0.5);
+        const value = this.values[Math.round(this.values.length - (this.convertPixelsToRem(event.offsetY) + 0.5))];
+        if (!this.hasValue({ value, beat })) {
+          if (this.hasValue({ beat })) {
+            this.removeValue({ beat });
+          }
+          this.$nextTick(() => this.addValue({ value, beat }));
+        } else {
+          this.removeValue({ value, beat });
+        }
+      },
+      addValue(value) {
         let array = [];
         if (Array.isArray(this.modelValue)) {
           array = [...this.modelValue];
         }
-        array.push({
-          value,
-          beat,
+        array.push(value);
+        this.$emit('update:modelValue', array);
+      },
+      removeValue(value) {
+        let array = [...this.modelValue];
+        array = array.filter(note => {
+          for (let property in value) {
+            if (note[property] == value[property]) {
+              return false;
+            }
+          }
+
+          return true;
         });
         this.$emit('update:modelValue', array);
       },
-      removeValue(value, beat) {
-        let array = [...this.modelValue];
-        array = array.filter(item => item.value != value || item.beat != beat);
-        this.$emit('update:modelValue', array);
-      },
-      hasValue(value, beat) {
+      hasValue(value) {
         if (!Array.isArray(this.modelValue)) {
           return false;
         }
-        return this.modelValue.some(note => note.beat == beat && note.value == value);
+        return this.modelValue.some(note => {
+          for (let property in value) {
+            if (note[property] != value[property]) {
+              return false;
+            }
+          }
+
+          return true;
+        });
       },
       updateValue(value) {
         this.$emit('update:modelValue', value);

@@ -23,12 +23,12 @@ const store = createStore({
       categories: [
         {
           type: 'generator',
-          color: 'hsl(120, 60%, 70%)',
+          color: 'hsl(120, 70%, 70%)',
           playable: true,
         },
         {
           type: 'modifier',
-          color: 'hsl(60, 60%, 70%)',
+          color: 'hsl(60, 70%, 70%)',
           playable: false,
         },
         {
@@ -38,7 +38,7 @@ const store = createStore({
         },
         {
           type: 'execution',
-          color: 'hsl(240, 60%, 70%)',
+          color: 'hsl(240, 70%, 70%)',
         },
       ],
       nodes: [
@@ -157,6 +157,11 @@ const store = createStore({
     updateNodeBeats(state, node) {
       const index = state.json.nodes.findIndex(stored => stored.id == node.id);
       state.json.nodes[index].beats = node.beats;
+      for (let property in state.json.nodes[index].data) {
+        if (Array.isArray(state.json.nodes[index].data[property])) {
+          state.json.nodes[index].data[property] = state.json.nodes[index].data[property].filter(item => item.beat <= node.beats);
+        }
+      }
     },
     updateNodeData(state, { id, data }) {
       const index = state.json.nodes.findIndex(node => node.id == id);

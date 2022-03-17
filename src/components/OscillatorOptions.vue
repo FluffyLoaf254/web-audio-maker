@@ -8,7 +8,7 @@
         <option value="triangle">Triangle</option>
       </select-input>
     </input-label>
-    <audio-param :disabled="Boolean(node.audioParams.frequency)" v-model="data.frequency" title="Frequency" :default="440" :beats="node.beats" :simple="false" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 880, 932, 988, 1047]" />
+    <audio-param :disabled="Boolean(node.audioParams.frequency)" v-model="data.frequency" title="Frequency" :default="440" :beats="node.beats" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 880, 932, 988, 1047]" />
     <audio-param :disabled="Boolean(node.audioParams.detune)" v-model="data.detune" title="Detune" :default="0" :beats="node.beats" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 880, 932, 988, 1047]" />
   </div>
 </template>

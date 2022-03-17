@@ -300,6 +300,7 @@
         if (!this.currentWire) {
           return;
         }
+
         const wire = this.wires.find(wire => wire.id == this.currentWire);
         if (wire.outputNode.id == nodeId || (wire.outputType == 'execOut' && inputType != 'execIn')) {
           this.abortConnection();
@@ -316,6 +317,9 @@
       },
       deleteConnection(nodeId, type, param) {
         const wire = this.wires.find(wire => wire.inputNode.id == nodeId && wire.inputType == type && wire.input == param);
+        if (!wire) {
+          return;
+        }
         this.wires = this.wires.filter(item => item.id != wire.id);
         this.$refs[wire.outputNode.ref][0].unhook(wire.outputType, wire.output);
         this.$refs[wire.inputNode.ref][0].unhook(wire.inputType, wire.input);
