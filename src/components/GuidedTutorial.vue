@@ -39,7 +39,7 @@
         if (bounds.bottom + 14 * 16 < window.innerHeight) {
           styles += 'top: ' + (bounds.bottom + 2 * 16) + 'px;';
         } else {
-          styles += 'bottom: ' + (window.innerHeight - bounds.top + 2 * 16) + 'px;';
+          styles += 'bottom: calc(100vh - ' + (bounds.top - 2 * 16) + 'px);';
         }
         
         return styles;
@@ -51,7 +51,7 @@
         this.index = 0;
         this.elements = window.document.querySelectorAll('[data-tutorial]');
         this.showing = true;
-        this.current.style.boxShadow = '0 0 0 0.6rem white';
+        this.current.style.boxShadow = '0 0 0 0.7rem white';
       },
       next() {
         this.current.style.boxShadow = null;
@@ -61,7 +61,7 @@
         } else {
           this.index++;
         }
-        this.current.style.boxShadow = '0 0 0 0.6rem white';
+        this.current.style.boxShadow = '0 0 0 0.7rem white';
       },
       end() {
         this.showing = false;
