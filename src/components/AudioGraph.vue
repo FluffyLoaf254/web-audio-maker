@@ -384,6 +384,10 @@
         };
       },
       handleMaximized(nodeId) {
+        if (this.playing != 'play') {
+          this.player.stop();
+          this.playing = null;
+        }
         if (nodeId) {
           this.addMenuOpen = false;
           this.maximized = nodeId;

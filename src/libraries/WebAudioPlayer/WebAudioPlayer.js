@@ -10,7 +10,7 @@ class WebAudioPlayer {
     this.reachedExecNodes = [];
     this.beat = 0;
     this.bpm = 120;
-    this.interval = 10 / this.bpm * 60 * 1000;
+    this.interval = 50;
     this.looping = false;
     this.method = null;
   }
