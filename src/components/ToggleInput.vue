@@ -18,6 +18,6 @@
       },
     },
 
-    emits: ['update:checked']
+    emits: ['update:checked'],
   }
 </script>

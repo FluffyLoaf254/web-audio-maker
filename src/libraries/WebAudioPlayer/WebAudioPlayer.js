@@ -5,12 +5,14 @@ class WebAudioPlayer {
     this.original = json;
     this.playingNodes = [];
     this.playing = false;
-    this.interval = 25;
     this.scheduleBeats = 10;
     this.reachedNodes = [];
     this.reachedExecNodes = [];
     this.beat = 0;
     this.bpm = 120;
+    this.interval = 10 / this.bpm * 60 * 1000;
+    this.looping = false;
+    this.method = null;
   }
 
   generateJson() {
@@ -18,6 +20,10 @@ class WebAudioPlayer {
   }
 
   play() {
+    this.method = {
+      name: 'play',
+      param: null,
+    };
     this.generateJson();
     const destination = this.json.nodes.find(node => node.type == 'destination');
     if (!destination) {
@@ -28,10 +34,15 @@ class WebAudioPlayer {
   }
 
   playUpTo(id) {
+    this.method = {
+      name: 'playUpTo',
+      param: id,
+    };
     this.generateJson();
     let node = this.json.nodes.find(node => node.id == id);
     if (node.type != 'destination') {
       const id = uuid();
+      node.execOut = [];
       node.outputs = [{
         output: 1,
         node: id,
@@ -67,6 +78,10 @@ class WebAudioPlayer {
   }
 
   playNode(id) {
+    this.method = {
+      name: 'playNode',
+      param: id,
+    };
     this.generateJson();
     const node = this.json.nodes.find(node => node.id == id);
     if (node.type != 'oscillator') {
@@ -78,6 +93,7 @@ class WebAudioPlayer {
     node.scheduling = true;
     this.playingNodes = [node];
     this.beat = 0;
+    this.playing = true;
     this.schedule(audioContext);
   }
 
@@ -85,9 +101,9 @@ class WebAudioPlayer {
     if (this.playingNodes.length == 0) {
       return;
     }
-    this.playingNodes.filter(node => node.started).forEach(node => {
+    this.playingNodes.filter(node => node.playing).forEach(node => {
       node.object.stop();
-      node.started = false;
+      node.playing = false;
     });
     this.playingNodes = [];
     this.playing = false;
@@ -103,8 +119,18 @@ class WebAudioPlayer {
 
     // connect nodes together
     nodes.forEach(node => {
+      if (!node.object) {
+        return;
+      }
       for (let output of node.outputs) {
-        const input = nodes.find(input => input.id == output.node);
+        let input = nodes.find(input => input.id == output.node);
+        if (input.type == 'mix') {
+          output = input.outputs[0];
+          input = nodes.find(input => input.id == output.node);
+        }
+        if (!input.object) {
+          continue
+        }
         if (output.type == 'audioParams') {
           node.object.connect(input.object[output.param]);
         } else if (output.type == 'inputs') {
@@ -120,6 +146,7 @@ class WebAudioPlayer {
     start.scheduling = true;
     this.playingNodes = nodes;
     this.beat = 0;
+    this.playing = true;
     this.reachedExecNodes = [];
     this.checkForExecLoop(start);
     this.schedule(audioContext);
@@ -138,12 +165,13 @@ class WebAudioPlayer {
   }
 
   schedule(context) {
+    if (!this.playing) {
+      return;
+    }
     const scheduling = this.playingNodes.map(node => {
       node.beats = Number(node.beats != null ? node.beats : this.calculateBeats(node));
       node.start = Number(node.start != null ? node.start : this.calculateStart(node));
-      if (node.start + node.beats > this.beat && node.start < this.beat + this.scheduleBeats) {
-        node.scheduling = true;
-      }
+      node.scheduling = (node.start + node.beats > this.beat && node.start < this.beat + this.scheduleBeats);
 
       return node;
     }).filter(node => node.scheduling);
@@ -154,16 +182,18 @@ class WebAudioPlayer {
       if (!node.object || node.type == 'destination') {
         continue;
       }
-      if (node.object.start && !node.started) {
+      if (node.object.start && !node.playing) {
         node.object.start(Math.max(0, (node.start / this.bpm) * 60 - context.currentTime));
-        node.started = true;
         node.playing = true;
-        this.playing = true;
         node.object.stop(Math.max(0, ((node.start + node.beats) / this.bpm) * 60 - context.currentTime));
         node.object.onended = () => {
           node.playing = false;
           if (!this.playingNodes.some(node => node.playing)) {
-            this.playing = false;
+            if (this.playing && this.looping) {
+              this[this.method.name](this.method.param);
+            } else {
+              this.playing = false;
+            }
           }
         };
       }
@@ -182,7 +212,7 @@ class WebAudioPlayer {
                 continue;
                 // node.object[param].setValueAtTime(0, (((node.start + offset) / this.bpm) * 60) - context.currentTime);
               }
-              node.object[param].setValueAtTime(value.value, (((node.start + offset) / this.bpm) * 60) - context.currentTime);
+              node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
             }
           }
           beat++;
@@ -271,6 +301,10 @@ class WebAudioPlayer {
         return new GainNode(context, options);
       case 'oscillator':
         return new OscillatorNode(context, options);
+      case 'delay':
+        return new DelayNode(context, options);
+      case 'biquad':
+        return new BiquadFilterNode(context, options);
       default:
         return null;
     }

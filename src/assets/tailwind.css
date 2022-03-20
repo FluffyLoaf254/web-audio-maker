@@ -6,6 +6,7 @@
 
 * {
   overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .pop-enter-active {

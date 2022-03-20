@@ -1,10 +1,10 @@
 <template>
-  <div class="absolute cursor-move overflow-hidden bg-gray-50 shadow-md rounded min-h-[10rem] min-w-[14rem]" :class="maximizedClasses" ref="container" :style="transitionStyles">
-    <div v-if="!maximized" class="flex flex-col">
+  <div class="select-none absolute cursor-move overflow-hidden bg-gray-50 shadow-md rounded" :class="maximizedClasses" ref="container" :style="transitionStyles">
+    <div v-if="!maximized" class="flex flex-col h-full">
       <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': node.categoryObject.color }">
         <span>{{ node.name }}</span>
         <div class="flex gap-2">
-          <icon-button @mousedown.stop @touchstart.stop>
+          <icon-button @mousedown.stop @touchstart.stop @click="showNote">
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
           <icon-button v-if="node.component" @mousedown.stop @touchstart.stop @click="maximized = true">
@@ -17,18 +17,18 @@
       </div>
       <div class="flex-grow h-full grid grid-cols-2 divide-x p-4">
         <div class="flex flex-col items-start gap-2 pr-4">
-          <exec-in-pin v-for="number in node.execIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('delete-connection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup.stop="endConnectionDrag($event, 'execIn', number)" @touchend.stop="endConnectionDrag($event, 'execIn', number)" />
-          <node-input v-for="number in node.inputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('delete-connection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup.stop="endConnectionDrag($event, 'inputs', number)" @touchend.stop="endConnectionDrag($event, 'inputs', number)" />
-          <audio-param-input v-for="param in node.audioParams" :key="param" :text="param" :hooked="isHooked('audioParams', param)" @click="$emit('delete-connection', node.id, 'audioParams', param)" @mousedown.stop @touchstart.stop @mouseup.stop="endConnectionDrag($event, 'audioParams', param)" @touchend.stop="endConnectionDrag($event, 'audioParams', param)" />
+          <exec-in-pin v-for="number in node.execIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('delete-connection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
+          <node-input v-for="number in node.inputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('delete-connection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
+          <audio-param-input v-for="param in node.audioParams" :key="param" :text="param" :hooked="isHooked('audioParams', param)" @click="$emit('delete-connection', node.id, 'audioParams', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParams', param)" />
         </div>
         <div class="flex flex-col items-end gap-2 pl-4">
-          <exec-out-pin v-for="number in node.execOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" />
-          <node-output v-for="number in node.outputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number)" />
+          <exec-out-pin v-for="number in node.execOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
+          <node-output v-for="number in node.outputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
         </div>
       </div>
       <div class="bg-white flex w-full justify-between items-center gap-4 p-2 h-10">
         <div class="flex items-center gap-2" v-if="node.beats != null">
-          <form-input :id="'beats-' + node.id" :modelValue="node.beats" @mousedown.stop @touchstart.stop @update:modelValue="changeBeats" type="number" min="1" max="120" step="1" />
+          <form-input class="w-20" :id="'beats-' + node.id" :modelValue="node.beats" @mousedown.stop @touchstart.stop @update:modelValue="changeBeats" type="number" min="1" max="120" step="1" />
           <input-label value="Beats" :for="'beats-' + node.id" />
         </div>
         <div v-else></div>
@@ -49,7 +49,7 @@
           </icon-button>
         </div>
       </div>
-      <div class="flex-grow overflow-y-auto" v-if="node.component">
+      <div class="flex-grow overflow-y-auto overscroll-y-auto" v-if="node.component">
         <component :is="node.component" v-bind="{ id: node.id }" ref="component"></component>
       </div>
       <div class="bg-white flex w-full justify-end items-center gap-4 p-2 h-10">
@@ -89,7 +89,7 @@
       InputLabel,
     },
 
-    emits: ['start-connection', 'hook-connection', 'abort-connection', 'delete-connection', 'delete-node', 'play-node', 'play-up-to-node', 'maximized', 'change-beats'],
+    emits: ['mobile-connection', 'start-connection', 'hook-connection', 'abort-connection', 'delete-connection', 'delete-node', 'play-node', 'play-up-to-node', 'maximized', 'change-beats'],
 
     props: {
       node: {
@@ -128,10 +128,10 @@
 
     computed: {
       maximizedClasses() {
-        return this.maximized ? 'cursor-auto rounded-none !left-0 !top-0' + this.extraClasses : 'w-auto h-auto';
+        return this.maximized ? 'cursor-auto rounded-none !left-0 !top-0 min-h-0 min-w-0' + this.extraClasses : 'min-h-max min-w-max w-auto h-auto';
       },
       transitionStyles() {
-        return this.recentlyTransitioned ? 'width: 14rem; height: 14rem; transition: left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease;' : 'transition: top 0.05s linear, left 0.05s linear;';
+        return this.recentlyTransitioned ? 'width: 15rem; height: 14rem; transition: left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease;' : 'transition: top 0.05s linear, left 0.05s linear;';
       },
     },
 
@@ -188,6 +188,9 @@
         }
         this.$emit('hook-connection', this.node.id, type, input, position);
       },
+      endConnectionMobile() {
+        this.$emit('mobile-connection');
+      },
       hook(type, param) {
         this[type].push(param);
       },
@@ -205,7 +208,10 @@
       },
       changeBeats(beats) {
         this.$emit('change-beats', this.node.id, beats);
-      }
+      },
+      showNote() {
+        window.alert(this.node.note);
+      },
     },
   };
 </script>

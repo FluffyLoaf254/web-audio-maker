@@ -1,21 +1,22 @@
 <template>
 <div class="grid grid-cols-1 h-screen divide-y" style="grid-template-rows: min-content minmax(0, 1fr) min-content;">
-  <header-bar @change-bpm="changeBpm">WebAudioMaker</header-bar>
+  <header-bar @change-bpm="changeBpm" @tutorial="showTutorial">WebAudioMaker</header-bar>
   <div class="flex w-full h-full overflow-hidden md:overflow-visible relative">
-    <div class="flex w-full h-full relative ml-0 md:ml-0 transition-all" :class="{ '-ml-64': addMenuOpen }">
+    <div class="flex w-full h-full relative ml-0 md:ml-0 transition-all md:overflow-hidden" :class="{ '-ml-64': addMenuOpen }">
       <div class="relative overflow-hidden bg-gradient-to-tr from-purple-500 to-pink-500 w-screen md:w-full h-full" ref="graph" @mousemove="setMousePosition($event)" @touchmove="setMousePosition($event)" @mouseup="abortConnection" @touchend="abortConnection">
         <div class="bg-repeat min-w-full min-h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="width: 500rem; height: 500rem; background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem); transition: margin-left 0.05s linear, margin-top 0.05s linear;" :style="{ 'margin-left': finalPosition.x + 'rem', 'margin-top': finalPosition.y + 'rem' }">
           <transition-group name="pop">
-            <audio-node :node="node" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="node.ref" :key="node.id" :style="{ 'z-index': maximized == node.id ? '200' : Math.trunc(100 - (finalPosition.x + finalPosition.y + node.position.x + node.position.y + (node.ref == dragRef ? dragPosition.x + dragPosition.y : 0)) / 10), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
+            <audio-node :node="node" @mobile-connection="hookConnectionMobile" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="node.ref" :key="node.id" :style="{ 'z-index': maximized == node.id ? '200' : Math.trunc(100 - (finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0)) / 5), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
           </transition-group>
           <audio-wire :style="{ 'z-index': $refs[wire.outputNode.ref][0].$el.style.zIndex, left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" v-for="wire in wires" :key="wire.id" :start="calculateStart(wire)" :end="calculateEnd(wire)" :color="wire.color" />
         </div>
-        <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop />
+        <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop data-tutorial="Use this button to open the menu for adding new audio graph nodes. This is the place to start." />
       </div>
-      <add-menu class="absolute h-full -right-64 md:relative md:right-0 md:w-0 md:overflow-hidden transition-all" :class="{ 'md:w-64': addMenuOpen }" @add="addNode" />
+      <add-menu class="absolute h-full -right-64 md:relative md:right-0 transition-all" :class="{ 'md:w-64': addMenuOpen, 'md:w-0': !addMenuOpen }" @add="addNode" />
     </div>
   </div>
-  <footer-bar @play="play" />
+  <footer-bar @search="search" @play="play" @loop="setLooping" />
+  <guided-tutorial ref="tutorial" />
 </div>
 </template>
 
@@ -26,6 +27,7 @@
   import HeaderBar from './HeaderBar.vue';
   import FooterBar from './FooterBar.vue';
   import AddMenu from './AddMenu.vue';
+  import GuidedTutorial from './GuidedTutorial.vue';
   import { v4 as uuid } from 'uuid';
   import { WebAudioPlayer } from '../libraries/WebAudioPlayer';
 
@@ -37,6 +39,7 @@
       HeaderBar,
       FooterBar,
       AddMenu,
+      GuidedTutorial,
     },
 
     data() {
@@ -70,6 +73,7 @@
         player: null,
         playing: null,
         maximized: null,
+        lastTouches: null,
       };
     },
 
@@ -131,6 +135,7 @@
     methods: {
       changeBpm(value) {
         this.player.bpm = value;
+        this.$store.commit('updateBpm', value);
       },
       play() {
         if (!this.player.playing) {
@@ -183,9 +188,26 @@
           };
         } else {
           this.dragStartPosition = {
-            x: this.convertPixelsToRem(event.offsetX + this.$refs[node.ref][0].$el.offsetLeft),
-            y: this.convertPixelsToRem(event.offsetY + this.$refs[node.ref][0].$el.offsetTop),
+            x: this.convertPixelsToRem(event.offsetX),
+            y: this.convertPixelsToRem(event.offsetY),
           };
+
+          let current = event.target;
+          while (current != this.$refs[node.ref][0].$el) {
+            if (current instanceof SVGElement) {
+              const bounds = current.getBoundingClientRect();
+              this.dragStartPosition.x = this.convertPixelsToRem(event.clientX - bounds.left - current.clientLeft);
+              this.dragStartPosition.y = this.convertPixelsToRem(event.clientY - bounds.top - current.clientTop);
+              current = current.parentNode;
+              continue;
+            }
+            this.dragStartPosition.x += this.convertPixelsToRem(current.offsetLeft);
+            this.dragStartPosition.y += this.convertPixelsToRem(current.offsetTop);
+            current = current.offsetParent;
+          }
+
+          this.dragStartPosition.x += this.convertPixelsToRem(this.$refs[node.ref][0].$el.offsetLeft);
+          this.dragStartPosition.y += this.convertPixelsToRem(this.$refs[node.ref][0].$el.offsetTop);
         }
         this.dragRef = node.ref;
       },
@@ -226,6 +248,7 @@
       },
       setMousePosition(event) {
         if (event.touches) {
+          this.lastTouches = event.touches;
           this.mousePosition = {
             x: this.convertPixelsToRem(event.touches[0].pageX - this.graphPosition.x),
             y: this.convertPixelsToRem(event.touches[0].pageY - this.graphPosition.y),
@@ -256,8 +279,8 @@
         const added = {
           id,
           position: {
-            x: (this.size.width / 2) - 8 - this.finalPosition.x,
-            y: (this.size.height / 2) - 8 - this.finalPosition.y,
+            x: (this.size.width / 2) - 9 - this.finalPosition.x,
+            y: (this.size.height / 2) - 9 - this.finalPosition.y,
           },
           ref: 'node-' + id,
           categoryObject: this.$store.getters.categoryOf(node),
@@ -315,6 +338,16 @@
         this.$refs[wire.inputNode.ref][0].hook(inputType, input);
         this.$store.commit('addWire', wire);
       },
+      hookConnectionMobile() {
+        if (!this.currentWire || !this.lastTouches) {
+          return;
+        }
+        const element = document.elementFromPoint(this.lastTouches[0].pageX, this.lastTouches[0].pageY);
+        if (element) {
+          const event = new Event('mouseup', { 'bubbles': true, 'cancelable': true });
+          element.dispatchEvent(event);
+        }
+      },
       deleteConnection(nodeId, type, param) {
         const wire = this.wires.find(wire => wire.inputNode.id == nodeId && wire.inputType == type && wire.input == param);
         if (!wire) {
@@ -362,6 +395,22 @@
         const node = this.nodes.find(node => node.id == nodeId);
         node.beats = beats;
         this.$store.commit('updateNodeBeats', node);
+      },
+      setLooping(value) {
+        this.player.looping = value;
+      },
+      search(input) {
+        const node = this.nodes.find(node => node.name.toLowerCase().includes(input.toLowerCase()));
+        console.log(input, node);
+        if (!node) {
+          return;
+        }
+        this.position.x = -node.position.x + this.size.width / 2 - 9;
+        this.position.y = -node.position.y + this.size.height / 2 - 9;
+        this.$store.commit('updatePosition', this.finalPosition);
+      },
+      showTutorial() {
+        this.$refs.tutorial.begin();
       },
     },
   };
