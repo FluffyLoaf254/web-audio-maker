@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-4 p-4">
-    <audio-param :disabled="hasAudioParamInput('gain')" v-model="data.gain" title="Gain" :beats="beats" min="0" max="10" :default="1" :values="[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0, 5.0]" />
+    <audio-param :disabled="hasAudioParamInput('gain')" v-model="data.gain" title="Gain" :beats="beats" min="0" max="10" :default="1" :defaultStart="0.0" algorithmDefault="x + 2 ^ (n / 2)" />
   </div>
 </template>
 

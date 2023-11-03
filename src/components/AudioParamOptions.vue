@@ -1,6 +1,6 @@
 <template>
     <div class="flex flex-col gap-4 p-4">
-      <audio-param v-model="data.output" title="Data" :default="0" :beats="node.beats" min="0" max="20000" :values="[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]" />
+      <audio-param v-model="data.output" title="Data" :beats="node.beats" min="0" max="20000" />
     </div>
   </template>
   

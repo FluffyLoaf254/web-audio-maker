@@ -205,7 +205,6 @@ class WebAudioPlayer {
         for (let output of node.audioParamInputs) {
           data = Object.assign(data, { [output.input]: this.playingNodes.find(item => item.id == output.node).data.output });
         }
-        console.log(data);
         while (beat < this.scheduleBeats && (this.beat + beat - node.start < node.beats)) {
           if (beat + this.beat >= node.start) {
             for (let param in data) {

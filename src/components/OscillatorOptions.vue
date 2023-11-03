@@ -8,8 +8,8 @@
         <option value="triangle">Triangle</option>
       </select-input>
     </input-label>
-    <audio-param :disabled="hasAudioParamInput('frequency')" v-model="data.frequency" title="Frequency" :default="440" :beats="node.beats" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494]" />
-    <audio-param :disabled="hasAudioParamInput('detune')" v-model="data.detune" title="Detune" :default="0" :beats="node.beats" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494]" />
+    <audio-param :disabled="hasAudioParamInput('frequency')" v-model="data.frequency" title="Frequency" :default="440" :startDefault="262" algorithmDefault="x * 2 ^ (n / 12)" :beats="node.beats" min="0" max="20000" />
+    <audio-param :disabled="hasAudioParamInput('detune')" v-model="data.detune" title="Detune" :default="0" :beats="node.beats" min="0" max="20000" startDefault="262" algorithmDefault="x * 2 ^ (n / 12)" />
   </div>
 </template>
 
