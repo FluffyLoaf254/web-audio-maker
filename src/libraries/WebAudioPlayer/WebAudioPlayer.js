@@ -276,10 +276,10 @@ class WebAudioPlayer {
       const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
       nodes = nodes.concat(this.getChainedNodes(childNode));
     }
-    for (let child of node.audioParams) {
-      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      nodes = nodes.concat(this.getChainedNodes(childNode));
-    }
+    // for (let child of node.audioParams) {
+    //   const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
+    //   nodes = nodes.concat(this.getChainedNodes(childNode));
+    // }
     for (let child of node.execIn) {
       const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
       nodes = nodes.concat(this.getChainedNodes(childNode, false));

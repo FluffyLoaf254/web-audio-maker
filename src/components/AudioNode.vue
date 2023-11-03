@@ -1,13 +1,13 @@
 <template>
   <div class="select-none absolute cursor-move overflow-hidden bg-gray-50 shadow-md rounded" :class="maximizedClasses" ref="container" :style="transitionStyles">
     <div v-if="!maximized" class="flex flex-col h-full">
-      <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': node.categoryObject.color }">
-        <span>{{ node.name }}</span>
+      <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
+        <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
           <icon-button @mousedown.stop @touchstart.stop @click="showNote">
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
-          <icon-button v-if="node.component" @mousedown.stop @touchstart.stop @click="maximized = true">
+          <icon-button v-if="typeObject.component" @mousedown.stop @touchstart.stop @click="maximized = true">
             <arrows-pointing-out-icon class="h-5 w-5" />
           </icon-button>
           <icon-button @mousedown.stop @touchstart.stop @click="$emit('delete-node', node.id)">
@@ -17,13 +17,13 @@
       </div>
       <div class="flex-grow h-full grid grid-cols-2 divide-x p-4">
         <div class="flex flex-col items-start gap-2 pr-4">
-          <exec-in-pin v-for="number in node.execIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('delete-connection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
-          <node-input v-for="number in node.inputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('delete-connection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
-          <audio-param-input v-for="param in node.audioParams" :key="param" :text="param" :hooked="isHooked('audioParams', param)" @click="$emit('delete-connection', node.id, 'audioParams', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParams', param)" />
+          <exec-in-pin v-for="number in typeObject.numberOfExecIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('delete-connection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
+          <node-input v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('delete-connection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
+          <audio-param-input v-for="param in typeObject.audioParams" :key="param" :text="param" :hooked="isHooked('audioParams', param)" @click="$emit('delete-connection', node.id, 'audioParams', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParams', param)" />
         </div>
         <div class="flex flex-col items-end gap-2 pl-4">
-          <exec-out-pin v-for="number in node.execOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
-          <node-output v-for="number in node.outputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
+          <exec-out-pin v-for="number in typeObject.numberOfExecOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
+          <node-output v-for="number in typeObject.numberOfOutputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
         </div>
       </div>
       <div class="bg-white flex w-full justify-between items-center gap-4 p-2 h-10">
@@ -32,14 +32,14 @@
           <input-label value="Beats" :for="'beats-' + node.id" />
         </div>
         <div v-else></div>
-        <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="node.category != 'execution'">
+        <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="typeObject.category != 'execution'">
           <musical-note-icon class="h-5 w-5" />
         </icon-button>
       </div>
     </div>
     <div v-else class="flex flex-col h-full">
-      <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': node.categoryObject.color }">
-        <span>{{ node.name }}</span>
+      <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
+        <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
           <icon-button @mousedown.stop @touchstart.stop>
             <information-circle-icon class="h-5 w-5" />
@@ -49,11 +49,11 @@
           </icon-button>
         </div>
       </div>
-      <div class="flex-grow overflow-y-auto overscroll-y-auto" v-if="node.component">
-        <component :is="node.component" v-bind="{ id: node.id }" ref="component"></component>
+      <div class="flex-grow overflow-y-auto overscroll-y-auto" v-if="typeObject.component">
+        <component :is="typeObject.component" v-bind="{ id: node.id }" ref="component"></component>
       </div>
       <div class="bg-white flex w-full justify-end items-center gap-4 p-2 h-10">
-        <icon-button v-if="node.categoryObject.playable" @mousedown.stop @touchstart.stop @click="playNode">
+        <icon-button v-if="categoryObject.playable" @mousedown.stop @touchstart.stop @click="playNode">
           <musical-note-icon class="h-5 w-5" />
         </icon-button>
       </div>
@@ -96,19 +96,12 @@
         default: {
           id: null,
           type: null,
-          component: null,
-          category: null,
-          categoryObject: {
-            type: null,
-            color: 'black',
-          },
-          name: '',
-          inputs: 0,
-          outputs: 0,
-          audioParams: [],
-          execIn: 0,
-          execOut: 0,
           beats: null,
+          outputs: [],
+          inputs: [],
+          audioParams: [],
+          execIn: [],
+          execOut: [],
         },
       },
     },
@@ -116,17 +109,19 @@
     data() {
       return {
         maximized: false,
-        outputs: [],
-        inputs: [],
-        audioParams: [],
-        execIn: [],
-        execOut: [],
         recentlyTransitioned: false,
         extraClasses: '',
+        dragging: null,
       };
     },
 
     computed: {
+      typeObject() {
+        return this.$store.getters.typeOf(this.node);
+      },
+      categoryObject() {
+        return this.$store.getters.categoryOf(this.typeObject);
+      },
       maximizedClasses() {
         return this.maximized ? 'cursor-auto rounded-none !left-0 !top-0 min-h-0 min-w-0' + this.extraClasses : 'min-h-max min-w-max w-auto h-auto';
       },
@@ -151,6 +146,7 @@
 
     methods: {
       startConnectionDrag(event, type, param, color) {
+        this.dragging = { type, param };
         const position = {
           x: 16,
           y: 16,
@@ -168,6 +164,7 @@
         this.$emit('start-connection', this.node.id, type, param, position, color);
       },
       endConnectionDrag(event, type, input) {
+        this.dragging = null;
         if (this.isHooked(type, input)) {
           this.$emit('abort-connection');
           return;
@@ -191,14 +188,9 @@
       endConnectionMobile() {
         this.$emit('mobile-connection');
       },
-      hook(type, param) {
-        this[type].push(param);
-      },
-      unhook(type, param) {
-        this[type] = this[type].filter(item => item != param);
-      },
       isHooked(type, param) {
-        return this[type].includes(param);
+        return (this.dragging?.type == type && this.dragging?.param == param)
+          || this.node[type].some(connection => connection.param == param);
       },
       playNode() {
         this.$emit('play-node', this.node.id);

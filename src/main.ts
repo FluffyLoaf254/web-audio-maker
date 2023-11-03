@@ -51,11 +51,11 @@ const store = createStore({
           component: null,
           category: 'logic',
           note: 'This logic node must be used to start the execution of the audio graph.',
-          inputs: 0,
-          outputs: 0,
+          numberOfInputs: 0,
+          numberOfOutputs: 0,
           audioParams: [],
-          execIn: 0,
-          execOut: 1,
+          numberOfExecIn: 0,
+          numberOfExecOut: 1,
           max: 1,
           beats: null,
         },
@@ -65,14 +65,14 @@ const store = createStore({
           component: markRaw(OscillatorOptions),
           category: 'generator',
           note: 'This node can be used to generate sounds which can be further refined.',
-          inputs: 0,
-          outputs: 1,
+          numberOfInputs: 0,
+          numberOfOutputs: 1,
           audioParams: [
             'frequency',
             'detune',
           ],
-          execIn: 1,
-          execOut: 1,
+          numberOfExecIn: 1,
+          numberOfExecOut: 1,
           max: 10,
           beats: 60,
         },
@@ -82,13 +82,13 @@ const store = createStore({
           component: markRaw(GainOptions),
           category: 'modifier',
           note: 'Scales the decibel value of the input audio.',
-          inputs: 1,
-          outputs: 1,
+          numberOfInputs: 1,
+          numberOfOutputs: 1,
           audioParams: [
             'gain',
           ],
-          execIn: 0,
-          execOut: 0,
+          numberOfExecIn: 0,
+          numberOfExecOut: 0,
           max: 5,
           beats: null,
         },
@@ -98,13 +98,13 @@ const store = createStore({
           component: markRaw(DelayOptions),
           category: 'modifier',
           note: 'Applies a delay to the audio.',
-          inputs: 1,
-          outputs: 1,
+          numberOfInputs: 1,
+          numberOfOutputs: 1,
           audioParams: [
             'delayTime',
           ],
-          execIn: 0,
-          execOut: 0,
+          numberOfExecIn: 0,
+          numberOfExecOut: 0,
           max: 5,
           beats: null,
         },
@@ -114,16 +114,16 @@ const store = createStore({
           component: markRaw(BiquadFilterOptions),
           category: 'modifier',
           note: 'Applies a configurable low-order filter to the audio.',
-          inputs: 1,
-          outputs: 1,
+          numberOfInputs: 1,
+          numberOfOutputs: 1,
           audioParams: [
             'frequency',
             'detune',
             'Q',
             'gain',
           ],
-          execIn: 0,
-          execOut: 0,
+          numberOfExecIn: 0,
+          numberOfExecOut: 0,
           max: 3,
           beats: null,
         },
@@ -133,11 +133,11 @@ const store = createStore({
           component: null,
           category: 'logic',
           note: 'Use this node to combine several outputs into one output.',
-          inputs: 2,
-          outputs: 1,
+          numberOfInputs: 2,
+          numberOfOutputs: 1,
           audioParams: [],
-          execIn: 0,
-          execOut: 0,
+          numberOfExecIn: 0,
+          numberOfExecOut: 0,
           max: 10,
           beats: null,
         },
@@ -147,11 +147,11 @@ const store = createStore({
           component: markRaw(DestinationOptions),
           category: 'destination',
           note: 'This node represents the audio destination (the speakers).',
-          inputs: 1,
-          outputs: 0,
+          numberOfInputs: 1,
+          numberOfOutputs: 0,
           audioParams: [],
-          execIn: 0,
-          execOut: 0,
+          numberOfExecIn: 0,
+          numberOfExecOut: 0,
           max: 1,
           beats: null,
         },
@@ -161,9 +161,14 @@ const store = createStore({
 
   getters: {
     categoryOf(state) {
-      return (node) => {
-        return state.categories.find(category => category.type == node.category);
+      return (type) => {
+        return state.categories.find(category => category.type == type.category);
       };
+    },
+    typeOf(state) {
+      return (node) => {
+        return state.nodes.find(item => item.type == node.type);
+      }
     },
     numberOfType(state) {
       return (type) => {
@@ -188,20 +193,11 @@ const store = createStore({
   },
 
   mutations: {
+    load(state, json) {
+      state.json = json;
+    },
     addNode(state, node) {
-      state.json.nodes.push({
-        id: node.id,
-        order: node.order,
-        type: node.type,
-        position: node.position,
-        beats: node.beats,
-        outputs: [],
-        inputs: [],
-        audioParams: [],
-        execIn: [],
-        execOut: [],
-        data: {},
-      });
+      state.json.nodes.push(node);
     },
     removeNode(state, id) {
       state.json.wires = state.json.wires.filter(wire => wire.inputNode != id && wire.outputNode != id);
@@ -236,36 +232,28 @@ const store = createStore({
       }
     },
     addWire(state, wire) {
-      const outputIndex = state.json.nodes.findIndex(node => node.id == wire.outputNode.id);
+      const outputIndex = state.json.nodes.findIndex(node => node.id == wire.outputNode);
       state.json.nodes[outputIndex][wire.outputType].push({
         output: wire.output,
-        node: wire.inputNode.id,
+        node: wire.inputNode,
         type: wire.inputType,
         param: wire.input,
       });
-      const inputIndex = state.json.nodes.findIndex(node => node.id == wire.inputNode.id);
+      const inputIndex = state.json.nodes.findIndex(node => node.id == wire.inputNode);
       state.json.nodes[inputIndex][wire.inputType].push({
         input: wire.input,
-        node: wire.outputNode.id,
+        node: wire.outputNode,
         type: wire.outputType,
         param: wire.output,
       });
-      state.json.wires.push({
-        id: wire.id,
-        outputNode: wire.outputNode.id,
-        output: wire.output,
-        outputType: wire.outputType,
-        inputNode: wire.inputNode.id,
-        input: wire.input,
-        inputType: wire.inputType,
-      });
+      state.json.wires.push(wire);
     },
     removeWire(state, wire) {
       state.json.wires = state.json.wires.filter(item => item.id != wire.id);
-      const outputIndex = state.json.nodes.findIndex(node => node.id == wire.outputNode.id);
-      state.json.nodes[outputIndex][wire.outputType] = state.json.nodes[outputIndex][wire.outputType].filter(output => !(output.output == wire.output && output.node == wire.inputNode.id && output.type == wire.inputType && output.param == wire.input));
-      const inputIndex = state.json.nodes.findIndex(node => node.id == wire.inputNode.id);
-      state.json.nodes[inputIndex][wire.inputType] = state.json.nodes[inputIndex][wire.inputType].filter(input => !(input.input == wire.input && input.node == wire.outputNode.id && input.type == wire.outputType && input.param == wire.output));
+      const outputIndex = state.json.nodes.findIndex(node => node.id == wire.outputNode);
+      state.json.nodes[outputIndex][wire.outputType] = state.json.nodes[outputIndex][wire.outputType].filter(output => !(output.output == wire.output && output.node == wire.inputNode && output.type == wire.inputType && output.param == wire.input));
+      const inputIndex = state.json.nodes.findIndex(node => node.id == wire.inputNode);
+      state.json.nodes[inputIndex][wire.inputType] = state.json.nodes[inputIndex][wire.inputType].filter(input => !(input.input == wire.input && input.node == wire.outputNode && input.type == wire.outputType && input.param == wire.output));
     },
     updatePosition(state, position) {
       state.json.settings.position = position;

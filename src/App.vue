@@ -5,7 +5,3 @@ import AudioGraph from './components/AudioGraph.vue'
 <template>
   <audio-graph />
 </template>
-
-<style scoped>
-
-</style>
