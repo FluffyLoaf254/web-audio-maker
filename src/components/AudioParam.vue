@@ -4,9 +4,9 @@
       <div class="flex gap-4 items-center">
         <h3>{{ title }}</h3>
         <input-label value="Static" :for="'static-toggle-' + title" />
-        <toggle-input :name="'static-toggle-' + title" :id="'static-toggle-' + title" :checked="!Array.isArray(modelValue)" @update:checked="resetValue" />
+        <toggle-input :name="'static-toggle-' + title" :id="'static-toggle-' + title" :checked="!modelValue.array || !Array.isArray(modelValue.array)" @update:checked="resetValue" />
       </div>
-      <div v-if="!Array.isArray(modelValue)">
+      <div v-if="!modelValue.array || !Array.isArray(modelValue.array)">
         <input-label value="Value">
           <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :modelValue="modelValue" @update:modelValue="updateValue" />
         </input-label>
@@ -16,7 +16,7 @@
           <div class="relative bg-repeat cursor-pointer" :style="{ height: values * 2 + 'rem', width: beats * 2 + 'rem' }" @click="toggleNote($event)" style="background-size: 2rem 2rem; background-image: radial-gradient(circle at center, transparent 0, transparent 0.6rem, rgba(0, 0, 0, 0.2) 0.6rem, rgba(0, 0, 0, 0.2) 0.8rem, transparent 0.8rem);">
             <svg :viewBox="viewBox" :width="beats * 32" :height="values * 32">
               <transition-group name="fade">
-                <circle v-for="value in modelValue" :key="JSON.stringify(value)" :cx="(Number(value.beat) - 0.5) * 2" :cy="(values - (value.index + 0.5)) * 2" r="0.5" fill="transparent" stroke-width="0.4" stroke="hsl(0, 70%, 70%)" />
+                <circle v-for="value in modelValue.array" :key="JSON.stringify(value)" :cx="(Number(value.beat) - 0.5) * 2" :cy="(values - (value.index + 0.5)) * 2" r="0.5" fill="transparent" stroke-width="0.4" stroke="hsl(0, 70%, 70%)" />
               </transition-group>
             </svg>
           </div>
@@ -113,16 +113,16 @@
 
     methods: {
       recalculateValues() {
-        let array = [];
-        if (Array.isArray(this.modelValue)) {
-          array = [...this.modelValue].map(value => {
+        let object = this.newObject([]);
+        if (Boolean(this.modelValue.array) && Array.isArray(this.modelValue.array)) {
+          object.array = [...this.modelValue.array].map(value => {
             value.value = this.generateValue(value.index);
 
             return value;
           });
         }
 
-        this.$emit('update:modelValue', array);
+        this.$emit('update:modelValue', object);
       },
       convertPixelsToRem(pixels) {
         return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -141,16 +141,16 @@
         }
       },
       addValue(value) {
-        let array = [];
-        if (Array.isArray(this.modelValue)) {
-          array = [...this.modelValue];
+        let object = this.newObject([]);
+        if (this.modelValue.array && Array.isArray(this.modelValue.array)) {
+          object.array = [...this.modelValue.array];
         }
-        array.push(value);
-        this.$emit('update:modelValue', array);
+        object.array.push(value);
+        this.$emit('update:modelValue', object);
       },
       removeValue(value) {
-        let array = [...this.modelValue];
-        array = array.filter(note => {
+        let object = this.newObject([...this.modelValue]);
+        object.array = object.array.filter(note => {
           for (let property in value) {
             if (note[property] != value[property]) {
               return true;
@@ -159,13 +159,13 @@
 
           return false;
         });
-        this.$emit('update:modelValue', array);
+        this.$emit('update:modelValue', object);
       },
       hasValue(value) {
-        if (!Array.isArray(this.modelValue)) {
+        if (!this.modelValue.array || !Array.isArray(this.modelValue.array)) {
           return false;
         }
-        return this.modelValue.some(note => {
+        return this.modelValue.array.some(note => {
           for (let property in value) {
             if (note[property] != value[property]) {
               return false;
@@ -179,13 +179,14 @@
         this.$emit('update:modelValue', value);
       },
       resetValue(checked) {
-        this.$emit('update:modelValue', checked ? this.default : []);
         this.setToDefaults();
+        this.$emit('update:modelValue', checked ? this.default : this.newObject([]));
       },
       setToDefaults() {
-        this.start = this.startDefault;
-        this.algorithm = this.algorithmDefault;
-        this.values = this.valuesDefault;
+        console.log(this.modelValue);
+        this.start = this.modelValue.start ?? this.startDefault;
+        this.algorithm = this.modelValue.algorithm ?? this.algorithmDefault;
+        this.values = this.modelValue.values ?? this.valuesDefault;
       },
       generateValue(index) {
         try {
@@ -194,6 +195,14 @@
           return 0;
         }
       },
+      newObject(array) {
+        return {
+          start: this.start,
+          algorithm: this.algorithm,
+          values: this.values,
+          array: array,
+        };
+      }
     },
   };
 </script>

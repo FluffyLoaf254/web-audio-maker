@@ -46,7 +46,7 @@
       };
     },
     
-    mounted() {
+    beforeMount() {
       this.node = this.$store.getters.getNode(this.id);
       if (this.node.data) {
         this.data.type = this.node.data.type ?? 'sine';

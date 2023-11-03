@@ -208,14 +208,14 @@ class WebAudioPlayer {
         while (beat < this.scheduleBeats && (this.beat + beat - node.start < node.beats)) {
           if (beat + this.beat >= node.start) {
             for (let param in data) {
-              if (!Array.isArray(data[param])) {
+              if (!data[param].array || !Array.isArray(data[param].array)) {
                 if (Boolean(node.object[param].value)) {
                   node.object[param].value = (data[param] || 0);
                 }
                 continue;
               }
               const offset = this.beat + beat - node.start;
-              const value = data[param].find(value => value.beat - 1 == offset);
+              const value = data[param].array.find(value => value.beat - 1 == offset);
               if (!value) {
                 node.object[param].setValueAtTime(0, (((node.start + offset) / this.bpm) * 60) - context.currentTime);
               } else {
@@ -296,7 +296,7 @@ class WebAudioPlayer {
   createNode(context, type, data) {
     const options = {};
     for (let param in data) {
-      if (!Array.isArray(data[param])) {
+      if (!data[param].array || !Array.isArray(data[param].array)) {
         options[param] = data[param];
       } else {
         options[param] = 0;
