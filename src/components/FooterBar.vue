@@ -4,7 +4,7 @@
       <icon-button @click="$emit('search', input)">
         <magnifying-glass-icon class="w-5 h-5" />
       </icon-button>
-      <form-input class="w-36" placeholder="Find" v-model="input" />
+      <form-input class="w-36" placeholder="Find" v-model="input" @keyup.enter="$event => $emit('search', input)" />
     </div>
     <div class="flex gap-4 items-center">
       <icon-button @click="$emit('play')" data-tutorial="Begin playback of the whole audio graph. There are also buttons to play just a single node or even all nodes in the graph up to a given node.">

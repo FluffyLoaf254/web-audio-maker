@@ -174,22 +174,11 @@
         if (this.maximized) {
           return;
         }
-        if (event.touches) {
-          this.dragStartPosition = {
-            x: this.convertPixelsToRem(event.touches[0].pageX - this.graphPosition.x),
-            y: this.convertPixelsToRem(event.touches[0].pageY - this.graphPosition.y),
-          };
-        } else {
-          this.dragStartPosition = {
-            x: this.convertPixelsToRem(event.offsetX - this.graphPosition.x),
-            y: this.convertPixelsToRem(event.offsetY - this.graphPosition.y),
-          };
-
-          let rect = event.target.getBoundingClientRect();
-
-          this.dragStartPosition.x += this.convertPixelsToRem(rect.x);
-          this.dragStartPosition.y += this.convertPixelsToRem(rect.y);
-        }
+        this.setMousePosition(event);
+        this.dragStartPosition = {
+          x: this.mousePosition.x,
+          y: this.mousePosition.y,
+        };
         this.nodes.forEach(item => {
           if (item.order >= node.order && item.id != node.id) {
             item.order -= 1;
@@ -271,6 +260,7 @@
         this.$store.commit('addNode', added)
       },
       startConnection(nodeId, outputType, output, position, color) {
+        this.setMousePosition(event);
         const id = uuid();
         const node = this.nodes.find(node => node.id == nodeId);
         this.wires.push({

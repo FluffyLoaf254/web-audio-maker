@@ -211,10 +211,10 @@ class WebAudioPlayer {
               const offset = this.beat + beat - node.start;
               const value = node.data[param].find(value => value.beat - 1 == offset);
               if (!value) {
-                continue;
-                // node.object[param].setValueAtTime(0, (((node.start + offset) / this.bpm) * 60) - context.currentTime);
+                node.object[param].setValueAtTime(0, (((node.start + offset) / this.bpm) * 60) - context.currentTime);
+              } else {
+                node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
               }
-              node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
             }
           }
           beat++;
