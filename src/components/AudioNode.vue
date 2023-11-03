@@ -131,7 +131,7 @@
         return this.maximized ? 'cursor-auto rounded-none !left-0 !top-0 min-h-0 min-w-0' + this.extraClasses : 'min-h-max min-w-max w-auto h-auto';
       },
       transitionStyles() {
-        return this.recentlyTransitioned ? 'width: 15rem; height: 14rem; transition: left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease;' : 'transition: top 0.05s linear, left 0.05s linear;';
+        return this.recentlyTransitioned ? 'width: 15rem; height: 14rem; transition: left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease;' : 'transition: none;';
       },
     },
 
