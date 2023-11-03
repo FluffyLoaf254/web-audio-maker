@@ -231,7 +231,7 @@ class WebAudioPlayer {
 
   calculateBeats(node) {
     let current = [node];
-    while (current.reduce((carry, node) => carry || Number(node.beats), null) == null && current.length != 0) {
+    while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
       current = this.playingNodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
     }
 
