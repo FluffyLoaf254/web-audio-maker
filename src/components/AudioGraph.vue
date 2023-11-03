@@ -93,16 +93,9 @@
           x: 0,
           y: 0,
         };
-        let current = this.$refs.graph;
-        while (current != window.document.body) {
-          if (!(current instanceof HTMLElement)) {
-            current = current.parentNode;
-            continue;
-          }
-          position.x += current.offsetLeft;
-          position.y += current.offsetTop;
-          current = current.offsetParent;
-        }
+        let rect = this.$refs.graph.getBoundingClientRect();
+        position.x = rect.x;
+        position.y = rect.y;
 
         return position;
       },
@@ -188,26 +181,14 @@
           };
         } else {
           this.dragStartPosition = {
-            x: this.convertPixelsToRem(event.offsetX),
-            y: this.convertPixelsToRem(event.offsetY),
+            x: this.convertPixelsToRem(event.offsetX - this.graphPosition.x),
+            y: this.convertPixelsToRem(event.offsetY - this.graphPosition.y),
           };
 
-          let current = event.target;
-          while (current != this.$refs[node.ref][0].$el) {
-            if (current instanceof SVGElement) {
-              const bounds = current.getBoundingClientRect();
-              this.dragStartPosition.x = this.convertPixelsToRem(event.clientX - bounds.left - current.clientLeft);
-              this.dragStartPosition.y = this.convertPixelsToRem(event.clientY - bounds.top - current.clientTop);
-              current = current.parentNode;
-              continue;
-            }
-            this.dragStartPosition.x += this.convertPixelsToRem(current.offsetLeft);
-            this.dragStartPosition.y += this.convertPixelsToRem(current.offsetTop);
-            current = current.offsetParent;
-          }
+          let rect = event.target.getBoundingClientRect();
 
-          this.dragStartPosition.x += this.convertPixelsToRem(this.$refs[node.ref][0].$el.offsetLeft);
-          this.dragStartPosition.y += this.convertPixelsToRem(this.$refs[node.ref][0].$el.offsetTop);
+          this.dragStartPosition.x += this.convertPixelsToRem(rect.x);
+          this.dragStartPosition.y += this.convertPixelsToRem(rect.y);
         }
         this.nodes.forEach(item => {
           if (item.order >= node.order && item.id != node.id) {
@@ -263,23 +244,14 @@
           };
         } else {
           this.mousePosition = {
-            x: this.convertPixelsToRem(event.offsetX),
-            y: this.convertPixelsToRem(event.offsetY),
+            x: this.convertPixelsToRem(event.offsetX - this.graphPosition.x),
+            y: this.convertPixelsToRem(event.offsetY - this.graphPosition.y),
           };
           
-          let current = event.target;
-          while (current != this.$refs.graph) {
-            if (current instanceof SVGElement) {
-              const bounds = current.getBoundingClientRect();
-              this.mousePosition.x = this.convertPixelsToRem(event.clientX - bounds.left - current.clientLeft);
-              this.mousePosition.y = this.convertPixelsToRem(event.clientY - bounds.top - current.clientTop);
-              current = current.parentNode;
-              continue;
-            }
-            this.mousePosition.x += this.convertPixelsToRem(current.offsetLeft);
-            this.mousePosition.y += this.convertPixelsToRem(current.offsetTop);
-            current = current.offsetParent;
-          }
+          let rect = event.target.getBoundingClientRect();
+
+          this.mousePosition.x += this.convertPixelsToRem(rect.x);
+          this.mousePosition.y += this.convertPixelsToRem(rect.y);
         }
       },
       addNode(node) {
