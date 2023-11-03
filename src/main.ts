@@ -1,7 +1,7 @@
 import { createApp, markRaw } from 'vue';
 import { createStore } from 'vuex';
 import App from './App.vue';
-import './assets/tailwind.css';
+import './style.css';
 import OscillatorOptions from './components/OscillatorOptions.vue';
 import DelayOptions from './components/DelayOptions.vue';
 import GainOptions from './components/GainOptions.vue';

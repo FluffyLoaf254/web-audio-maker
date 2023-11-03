@@ -1,15 +1,11 @@
+<script setup lang="ts">
+import AudioGraph from './components/AudioGraph.vue'
+</script>
+
 <template>
   <audio-graph />
 </template>
 
-<script>
-  import AudioGraph from './components/AudioGraph.vue';
+<style scoped>
 
-  export default {
-    name: 'App',
-
-    components: {
-      AudioGraph,
-    }
-  };
-</script>
+</style>

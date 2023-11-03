@@ -17,7 +17,7 @@
   import IconButton from './IconButton.vue';
   import InputLabel from './InputLabel.vue';
   import FormInput from './FormInput.vue';
-  import { InformationCircleIcon } from '@heroicons/vue/solid';
+  import { InformationCircleIcon } from '@heroicons/vue/24/solid';
 
   export default {
     components: {

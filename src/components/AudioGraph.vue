@@ -325,7 +325,7 @@
         }
 
         const wire = this.wires.find(wire => wire.id == this.currentWire);
-        if (wire.outputNode.id == nodeId || (wire.outputType == 'execOut' && inputType != 'execIn')) {
+        if (wire.outputNode.id == nodeId || (inputType == 'execOut' && wire.outputType != 'execIn')) {
           this.abortConnection();
           return;
         }

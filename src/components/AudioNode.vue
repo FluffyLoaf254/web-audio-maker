@@ -8,10 +8,10 @@
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
           <icon-button v-if="node.component" @mousedown.stop @touchstart.stop @click="maximized = true">
-            <arrows-expand-icon class="h-5 w-5" />
+            <arrows-pointing-out-icon class="h-5 w-5" />
           </icon-button>
           <icon-button @mousedown.stop @touchstart.stop @click="$emit('delete-node', node.id)">
-            <x-icon class="h-5 w-5" />
+            <x-mark-icon class="h-5 w-5" />
           </icon-button>
         </div>
       </div>
@@ -33,7 +33,7 @@
         </div>
         <div v-else></div>
         <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="node.category != 'execution'">
-          <music-note-icon class="h-5 w-5" />
+          <musical-note-icon class="h-5 w-5" />
         </icon-button>
       </div>
     </div>
@@ -54,7 +54,7 @@
       </div>
       <div class="bg-white flex w-full justify-end items-center gap-4 p-2 h-10">
         <icon-button v-if="node.categoryObject.playable" @mousedown.stop @touchstart.stop @click="playNode">
-          <music-note-icon class="h-5 w-5" />
+          <musical-note-icon class="h-5 w-5" />
         </icon-button>
       </div>
     </div>
@@ -70,7 +70,7 @@
   import IconButton from './IconButton.vue';
   import FormInput from './FormInput.vue';
   import InputLabel from './InputLabel.vue';
-  import { ArrowDownIcon, ArrowsExpandIcon, InformationCircleIcon, MusicNoteIcon, XIcon } from '@heroicons/vue/solid';
+  import { ArrowDownIcon, ArrowsPointingOutIcon, InformationCircleIcon, MusicalNoteIcon, XMarkIcon } from '@heroicons/vue/24/solid';
 
   export default {
     components: {
@@ -81,10 +81,10 @@
       ExecOutPin,
       IconButton,
       ArrowDownIcon,
-      ArrowsExpandIcon,
+      ArrowsPointingOutIcon,
       InformationCircleIcon,
-      MusicNoteIcon,
-      XIcon,
+      MusicalNoteIcon,
+      XMarkIcon,
       FormInput,
       InputLabel,
     },
