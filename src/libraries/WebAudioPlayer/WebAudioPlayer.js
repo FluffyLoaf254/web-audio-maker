@@ -65,7 +65,7 @@ class WebAudioPlayer {
             param: 1,
           },
         ],
-        audioParams: [],
+        audioParamInputs: [],
         execIn: [],
         execOut: [],
         beats: 0,
@@ -131,9 +131,7 @@ class WebAudioPlayer {
         if (!input.object) {
           continue
         }
-        if (output.type == 'audioParams') {
-          node.object.connect(input.object[output.param]);
-        } else if (output.type == 'inputs') {
+        if (output.type == 'inputs') {
           node.object.connect(input.object);
         }
       }
@@ -202,14 +200,23 @@ class WebAudioPlayer {
       let nodes = this.getChainedOutputNodes(node);
       for (let node of nodes) {
         let beat = 0;
+        // handle audio param nodes
+        let data = node.data;
+        for (let output of node.audioParamInputs) {
+          data = Object.assign(data, { [output.input]: this.playingNodes.find(item => item.id == output.node).data.output });
+        }
+        console.log(data);
         while (beat < this.scheduleBeats && (this.beat + beat - node.start < node.beats)) {
           if (beat + this.beat >= node.start) {
-            for (let param in node.data) {
-              if (!Array.isArray(node.data[param])) {
+            for (let param in data) {
+              if (!Array.isArray(data[param])) {
+                if (Boolean(node.object[param].value)) {
+                  node.object[param].value = (data[param] || 0);
+                }
                 continue;
               }
               const offset = this.beat + beat - node.start;
-              const value = node.data[param].find(value => value.beat - 1 == offset);
+              const value = data[param].find(value => value.beat - 1 == offset);
               if (!value) {
                 node.object[param].setValueAtTime(0, (((node.start + offset) / this.bpm) * 60) - context.currentTime);
               } else {
@@ -276,10 +283,10 @@ class WebAudioPlayer {
       const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
       nodes = nodes.concat(this.getChainedNodes(childNode));
     }
-    // for (let child of node.audioParams) {
-    //   const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-    //   nodes = nodes.concat(this.getChainedNodes(childNode));
-    // }
+    for (let child of node.audioParamInputs) {
+      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
+      nodes = nodes.concat(this.getChainedNodes(childNode));
+    }
     for (let child of node.execIn) {
       const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
       nodes = nodes.concat(this.getChainedNodes(childNode, false));

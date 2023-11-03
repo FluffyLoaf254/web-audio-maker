@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-4 p-4">
     <input-label value="Type">
-      <select-input v-model="data.type">
+      <select-input name="type" v-model="data.type">
         <option value="lowpass">Low-Pass</option>
         <option value="highpass">High-Pass</option>
         <option value="bandpass">Band-Pass</option>
@@ -12,10 +12,10 @@
         <option value="allpass">All-Pass</option>
       </select-input>
     </input-label>
-    <audio-param :disabled="Boolean(node.audioParams.frequency)" v-model="data.frequency" title="Frequency" :default="350" :beats="beats" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494]" />
-    <audio-param :disabled="Boolean(node.audioParams.detune)" v-model="data.detune" title="Detune" :default="0" :beats="beats" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494]" />
-    <audio-param :disabled="Boolean(node.audioParams.Q)" v-model="data.Q" title="Q Factor" :beats="beats" min="0.0001" max="1000" :default="1" :values="[0.0001, 0.1, 1, 5, 10, 25, 50, 100, 500, 1000]" />
-    <audio-param :disabled="Boolean(node.audioParams.gain)" v-model="data.gain" title="Gain" :beats="beats" min="-40" max="40" :default="0" :values="[-40, -30, -20, -10, -5, 0, 5, 10, 20, 30, 40]" />
+    <audio-param :disabled="hasAudioParamInput('frequency')" v-model="data.frequency" title="Frequency" :default="350" :beats="beats" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494]" />
+    <audio-param :disabled="hasAudioParamInput('detune')" v-model="data.detune" title="Detune" :default="0" :beats="beats" min="0" max="20000" :values="[262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494]" />
+    <audio-param :disabled="hasAudioParamInput('Q')" v-model="data.Q" title="Q Factor" :beats="beats" min="0.0001" max="1000" :default="1" :values="[0.0001, 0.1, 1, 5, 10, 25, 50, 100, 500, 1000]" />
+    <audio-param :disabled="hasAudioParamInput('gain')" v-model="data.gain" title="Gain" :beats="beats" min="-40" max="40" :default="0" :values="[-40, -30, -20, -10, -5, 0, 5, 10, 20, 30, 40]" />
   </div>
 </template>
 
@@ -40,7 +40,7 @@
     data() {
       return {
         node: {
-          audioParams: {},
+          audioParamInputs: [],
           data: {},
         },
         data: {
@@ -72,6 +72,12 @@
           this.$store.commit('updateNodeData', { id: this.id, data: value });
         },
         deep: true,
+      },
+    },
+
+    methods: {
+      hasAudioParamInput(param) {
+        this.node.audioParamInputs.some(item => item.param == param);
       },
     },
   };

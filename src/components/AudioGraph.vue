@@ -294,7 +294,8 @@
           order: this.nodes.length + 1,
           outputs: [],
           inputs: [],
-          audioParams: node.audioParams,
+          audioParamInputs: [],
+          audioParamOutputs: [],
           execIn: [],
           execOut: [],
           data: {},
@@ -325,6 +326,7 @@
           return;
         }
 
+        this.$refs[this.nodes.find(node => node.id == this.currentWire.outputNode).ref][0].abort();
         this.currentWire = null;
       },
       hookConnection(nodeId, inputType, input, position) {

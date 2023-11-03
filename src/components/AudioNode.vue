@@ -4,9 +4,10 @@
       <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
         <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
-          <icon-button @mousedown.stop @touchstart.stop @click="showNote">
+          <icon-button @mousedown.stop @touchstart.stop @click="showNote($event)">
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
+          <message-modal @close="noteShown = false;" :show="Boolean(noteShown)" :parent="noteParent">{{ typeObject.note }}</message-modal>
           <icon-button v-if="typeObject.component" @mousedown.stop @touchstart.stop @click="maximized = true">
             <arrows-pointing-out-icon class="h-5 w-5" />
           </icon-button>
@@ -19,16 +20,17 @@
         <div class="flex flex-col items-start gap-2 pr-4">
           <exec-in-pin v-for="number in typeObject.numberOfExecIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('delete-connection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
           <node-input v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('delete-connection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
-          <audio-param-input v-for="param in typeObject.audioParams" :key="param" :text="param" :hooked="isHooked('audioParams', param)" @click="$emit('delete-connection', node.id, 'audioParams', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParams', param)" />
+          <audio-param-input v-for="param in typeObject.audioParams" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('delete-connection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
         </div>
         <div class="flex flex-col items-end gap-2 pl-4">
           <exec-out-pin v-for="number in typeObject.numberOfExecOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
           <node-output v-for="number in typeObject.numberOfOutputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
+          <audio-param-output v-for="number in typeObject.numberOfAudioParamOutputs" :key="number" :hooked="isHooked('audioParamOutputs', number)" @mousedown.stop="startConnectionDrag($event, 'audioParamOutputs', number, 'rgb(236 72 153)')" @touchstart.stop="startConnectionDrag($event, 'audioParamOutputs', number, 'rgb(236 72 153)')" @touchend="endConnectionMobile" />
         </div>
       </div>
       <div class="bg-white flex w-full justify-between items-center gap-4 p-2 h-10">
         <div class="flex items-center gap-2" v-if="node.beats != null">
-          <form-input class="w-20" :id="'beats-' + node.id" :modelValue="node.beats" @mousedown.stop @touchstart.stop @update:modelValue="changeBeats" type="number" min="1" max="120" step="1" />
+          <form-input class="w-20" :name="'beats-' + node.id" :id="'beats-' + node.id" :modelValue="node.beats" @mousedown.stop @touchstart.stop @update:modelValue="changeBeats" type="number" min="1" max="120" step="1" />
           <input-label value="Beats" :for="'beats-' + node.id" />
         </div>
         <div v-else></div>
@@ -65,11 +67,13 @@
   import NodeInput from './NodeInput.vue';
   import NodeOutput from './NodeOutput.vue';
   import AudioParamInput from './AudioParamInput.vue';
+  import AudioParamOutput from './AudioParamOutput.vue';
   import ExecInPin from './ExecInPin.vue';
   import ExecOutPin from './ExecOutPin.vue';
   import IconButton from './IconButton.vue';
   import FormInput from './FormInput.vue';
   import InputLabel from './InputLabel.vue';
+  import MessageModal from './MessageModal.vue';
   import { ArrowDownIcon, ArrowsPointingOutIcon, InformationCircleIcon, MusicalNoteIcon, XMarkIcon } from '@heroicons/vue/24/solid';
 
   export default {
@@ -77,6 +81,7 @@
       NodeInput,
       NodeOutput,
       AudioParamInput,
+      AudioParamOutput,
       ExecInPin,
       ExecOutPin,
       IconButton,
@@ -87,6 +92,7 @@
       XMarkIcon,
       FormInput,
       InputLabel,
+      MessageModal,
     },
 
     emits: ['mobile-connection', 'start-connection', 'hook-connection', 'abort-connection', 'delete-connection', 'delete-node', 'play-node', 'play-up-to-node', 'maximized', 'change-beats'],
@@ -99,7 +105,8 @@
           beats: null,
           outputs: [],
           inputs: [],
-          audioParams: [],
+          audioParamInputs: [],
+          audioParamOutputs: [],
           execIn: [],
           execOut: [],
         },
@@ -112,6 +119,8 @@
         recentlyTransitioned: false,
         extraClasses: '',
         dragging: null,
+        noteShown: false,
+        noteParent: null,
       };
     },
 
@@ -145,6 +154,9 @@
     },
 
     methods: {
+      abort() {
+        this.dragging = null;
+      },
       startConnectionDrag(event, type, param, color) {
         this.dragging = { type, param };
         const position = {
@@ -164,7 +176,7 @@
         this.$emit('start-connection', this.node.id, type, param, position, color);
       },
       endConnectionDrag(event, type, input) {
-        this.dragging = null;
+        this.abort();
         if (this.isHooked(type, input)) {
           this.$emit('abort-connection');
           return;
@@ -190,7 +202,7 @@
       },
       isHooked(type, param) {
         return (this.dragging?.type == type && this.dragging?.param == param)
-          || this.node[type].some(connection => connection.param == param);
+          || this.node[type].some(connection => (connection.input || connection.output) == param);
       },
       playNode() {
         this.$emit('play-node', this.node.id);
@@ -201,8 +213,9 @@
       changeBeats(beats) {
         this.$emit('change-beats', this.node.id, beats);
       },
-      showNote() {
-        window.alert(this.node.note);
+      showNote(event) {
+        this.noteParent = event.target;
+        this.noteShown = true;
       },
     },
   };

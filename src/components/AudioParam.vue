@@ -4,11 +4,11 @@
       <div class="flex gap-4 items-center">
         <h3>{{ title }}</h3>
         <input-label value="Static" :for="'static-toggle-' + title" />
-        <toggle-input :id="'static-toggle-' + title" :checked="!Array.isArray(modelValue)" @update:checked="resetValue" />
+        <toggle-input :name="'static-toggle-' + title" :id="'static-toggle-' + title" :checked="!Array.isArray(modelValue)" @update:checked="resetValue" />
       </div>
       <div v-if="!Array.isArray(modelValue)">
         <input-label value="Value">
-          <form-input class="w-full" type="number" :min="min" :max="max" :modelValue="modelValue" @update:modelValue="updateValue" />
+          <form-input :name="'static-' + title" class="w-full" type="number" :min="min" :max="max" :modelValue="modelValue" @update:modelValue="updateValue" />
         </input-label>
       </div>
       <div v-else class="relative overflow-x-scroll overscroll-y-auto bg-white w-full" ref="graph">

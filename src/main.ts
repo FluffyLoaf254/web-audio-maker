@@ -2,11 +2,12 @@ import { createApp, markRaw } from 'vue';
 import { createStore } from 'vuex';
 import App from './App.vue';
 import './style.css';
-import OscillatorOptions from './components/OscillatorOptions.vue';
-import DelayOptions from './components/DelayOptions.vue';
-import GainOptions from './components/GainOptions.vue';
-import DestinationOptions from './components/DestinationOptions.vue';
+import AudioParamOptions from './components/AudioParamOptions.vue';
 import BiquadFilterOptions from './components/BiquadFilterOptions.vue';
+import DelayOptions from './components/DelayOptions.vue';
+import DestinationOptions from './components/DestinationOptions.vue';
+import GainOptions from './components/GainOptions.vue';
+import OscillatorOptions from './components/OscillatorOptions.vue';
 
 const store = createStore({
   state() {
@@ -54,10 +55,26 @@ const store = createStore({
           numberOfInputs: 0,
           numberOfOutputs: 0,
           audioParams: [],
+          numberOfAudioParamOutputs: 0,
           numberOfExecIn: 0,
           numberOfExecOut: 1,
           max: 1,
           beats: null,
+        },
+        {
+          name: 'Audio Param',
+          type: 'param',
+          component: markRaw(AudioParamOptions),
+          category: 'logic',
+          note: 'This node is for driving audio params from one spot.',
+          numberOfInputs: 0,
+          numberOfOutputs: 0,
+          audioParams: [],
+          numberOfAudioParamOutputs: 1,
+          numberOfExecIn: 0,
+          numberOfExecOut: 0,
+          max: 10,
+          beats: 60,
         },
         {
           name: 'Oscillator',
@@ -71,6 +88,7 @@ const store = createStore({
             'frequency',
             'detune',
           ],
+          numberOfAudioParamOutputs: 0,
           numberOfExecIn: 1,
           numberOfExecOut: 1,
           max: 10,
@@ -87,6 +105,7 @@ const store = createStore({
           audioParams: [
             'gain',
           ],
+          numberOfAudioParamOutputs: 0,
           numberOfExecIn: 0,
           numberOfExecOut: 0,
           max: 5,
@@ -103,6 +122,7 @@ const store = createStore({
           audioParams: [
             'delayTime',
           ],
+          numberOfAudioParamOutputs: 0,
           numberOfExecIn: 0,
           numberOfExecOut: 0,
           max: 5,
@@ -122,6 +142,7 @@ const store = createStore({
             'Q',
             'gain',
           ],
+          numberOfAudioParamOutputs: 0,
           numberOfExecIn: 0,
           numberOfExecOut: 0,
           max: 3,
@@ -136,6 +157,7 @@ const store = createStore({
           numberOfInputs: 2,
           numberOfOutputs: 1,
           audioParams: [],
+          numberOfAudioParamOutputs: 0,
           numberOfExecIn: 0,
           numberOfExecOut: 0,
           max: 10,
@@ -150,6 +172,7 @@ const store = createStore({
           numberOfInputs: 1,
           numberOfOutputs: 0,
           audioParams: [],
+          numberOfAudioParamOutputs: 0,
           numberOfExecIn: 0,
           numberOfExecOut: 0,
           max: 1,
