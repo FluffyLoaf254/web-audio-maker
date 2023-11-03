@@ -191,6 +191,7 @@ const store = createStore({
     addNode(state, node) {
       state.json.nodes.push({
         id: node.id,
+        order: node.order,
         type: node.type,
         position: node.position,
         beats: node.beats,
@@ -218,6 +219,10 @@ const store = createStore({
           state.json.nodes[index].data[property] = state.json.nodes[index].data[property].filter(item => item.beats <= node.beats);
         }
       }
+    },
+    updateNodeOrder(state, node) {
+      const index = state.json.nodes.findIndex(stored => stored.id == node.id);
+      state.json.nodes[index].order = node.order;
     },
     updateNodeData(state, { id, data }) {
       const index = state.json.nodes.findIndex(node => node.id == id);

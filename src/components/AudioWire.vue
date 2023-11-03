@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute pointer-events-none" :style="{ width: '500rem', height: '500rem' }">
+  <div class="absolute pointer-events-none" :style="{ 'z-index': 100, width: '500rem', height: '500rem' }">
     <svg viewBox="0 0 500 500" width="100%" height="100%">
       <path :d="path" :stroke="color" stroke-width="0.25" fill="transparent" />
     </svg>

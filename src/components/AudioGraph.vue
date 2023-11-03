@@ -6,9 +6,9 @@
       <div class="relative overflow-hidden bg-gradient-to-tr from-purple-500 to-pink-500 w-screen md:w-full h-full" ref="graph" @mousemove="setMousePosition($event)" @touchmove="setMousePosition($event)" @mouseup="abortConnection" @touchend="abortConnection">
         <div class="bg-repeat min-w-full min-h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="width: 500rem; height: 500rem; background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'margin-left': finalPosition.x + 'rem', 'margin-top': finalPosition.y + 'rem' }">
           <transition-group name="pop">
-            <audio-node :node="node" @mobile-connection="hookConnectionMobile" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="node.ref" :key="node.id" :style="{ 'z-index': maximized == node.id ? '200' : Math.trunc(100 - (finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0)) / 5), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
+            <audio-node :node="node" @mobile-connection="hookConnectionMobile" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="node.ref" :key="node.id" :style="{ 'z-index': (maximized == node.id) ? 200 : Math.floor((node.order / Math.max(1.0, nodes.length)) * 100.0), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
           </transition-group>
-          <audio-wire :style="{ 'z-index': $refs[wire.outputNode.ref][0].$el.style.zIndex, left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" v-for="wire in wires" :key="wire.id" :start="calculateStart(wire)" :end="calculateEnd(wire)" :color="wire.color" />
+          <audio-wire :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" v-for="wire in wires" :key="wire.id" :start="calculateStart(wire)" :end="calculateEnd(wire)" :color="wire.color" />
         </div>
         <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop data-tutorial="Use this button to open the menu for adding new audio graph nodes. This is the place to start." />
       </div>
@@ -209,6 +209,14 @@
           this.dragStartPosition.x += this.convertPixelsToRem(this.$refs[node.ref][0].$el.offsetLeft);
           this.dragStartPosition.y += this.convertPixelsToRem(this.$refs[node.ref][0].$el.offsetTop);
         }
+        this.nodes.forEach(item => {
+          if (item.order >= node.order && item.id != node.id) {
+            item.order -= 1;
+            this.$store.commit('updateNodeOrder', item);
+          }
+        });
+        node.order = this.nodes.length;
+        this.$store.commit('updateNodeOrder', node);
         this.dragRef = node.ref;
       },
       endDrag(node) {
@@ -284,6 +292,7 @@
           },
           ref: 'node-' + id,
           categoryObject: this.$store.getters.categoryOf(node),
+          order: this.nodes.length + 1,
           ...node,
         };
         this.nodes.push(added);
@@ -405,7 +414,6 @@
       },
       search(input) {
         const node = this.nodes.find(node => node.name.toLowerCase().includes(input.toLowerCase()));
-        console.log(input, node);
         if (!node) {
           return;
         }
