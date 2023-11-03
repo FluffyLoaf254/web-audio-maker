@@ -183,7 +183,6 @@
         this.$emit('update:modelValue', checked ? this.default : this.newObject([]));
       },
       setToDefaults() {
-        console.log(this.modelValue);
         this.start = this.modelValue.start ?? this.startDefault;
         this.algorithm = this.modelValue.algorithm ?? this.algorithmDefault;
         this.values = this.modelValue.values ?? this.valuesDefault;
