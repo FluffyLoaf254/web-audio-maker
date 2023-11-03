@@ -5,7 +5,7 @@ class WebAudioPlayer {
     this.original = json;
     this.playingNodes = [];
     this.playing = false;
-    this.scheduleBeats = 10;
+    this.scheduleBeats = 100;
     this.reachedNodes = [];
     this.reachedExecNodes = [];
     this.beat = 0;
@@ -166,7 +166,7 @@ class WebAudioPlayer {
 
   schedule(context) {
     if (!this.playing) {
-      return;
+      return
     }
     const scheduling = this.playingNodes.map(node => {
       node.beats = Number(node.beats != null ? node.beats : this.calculateBeats(node));
@@ -182,6 +182,7 @@ class WebAudioPlayer {
       if (!node.object || node.type == 'destination') {
         continue;
       }
+
       if (node.object.start && !node.playing) {
         node.object.start(Math.max(0, (node.start / this.bpm) * 60 - context.currentTime));
         node.playing = true;
@@ -197,6 +198,7 @@ class WebAudioPlayer {
           }
         };
       }
+
       let nodes = this.getChainedOutputNodes(node);
       for (let node of nodes) {
         let beat = 0;
