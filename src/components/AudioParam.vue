@@ -149,7 +149,7 @@
         this.$emit('update:modelValue', object);
       },
       removeValue(value) {
-        let object = this.newObject([...this.modelValue]);
+        let object = this.newObject([...this.modelValue.array]);
         object.array = object.array.filter(note => {
           for (let property in value) {
             if (note[property] != value[property]) {

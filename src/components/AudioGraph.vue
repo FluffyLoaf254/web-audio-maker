@@ -6,7 +6,7 @@
       <div class="relative overflow-hidden bg-gradient-to-tr from-purple-500 to-pink-500 w-screen md:w-full h-full" ref="graph" @mousemove="setMousePosition($event)" @touchmove="setMousePosition($event)" @mouseup="abortConnection" @touchend="abortConnection">
         <div class="absolute left-2 top-2 flex flex-col gap-2">
           <save-button @click="saveJson" @mousemove.stop @touchmove.stop data-tutorial="Use this button to save your audio graph to a JSON file." />
-          <load-button @click="selectLoadJsonFile" @mousemove.stop @touchmove.stop data-tutorial="Use this button to save your audio graph to a JSON file." />
+          <load-button @click="selectLoadJsonFile" @mousemove.stop @touchmove.stop data-tutorial="Use this button to load an audio graph from a JSON file." />
           <input ref="loader" @change="loadJson($event)" type="file" class="hidden">
         </div>
         <div class="bg-repeat min-w-full min-h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="width: 500rem; height: 500rem; background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'margin-left': finalPosition.x + 'rem', 'margin-top': finalPosition.y + 'rem' }">

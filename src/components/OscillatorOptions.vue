@@ -66,7 +66,7 @@
 
     methods: {
       hasAudioParamInput(param) {
-        this.node.audioParamInputs.some(item => item.param == param);
+        return this.node.audioParamInputs.some(item => item.input == param);
       },
     },
   };
