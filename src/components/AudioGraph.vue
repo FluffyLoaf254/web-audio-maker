@@ -344,7 +344,8 @@
         this.currentWire.input = input;
         this.currentWire.inputType = inputType;
         this.$store.commit('addWire', this.currentWire);
-        this.currentWire = null;
+        this.wires.push(this.currentWire);
+        this.abortConnection();
       },
       hookConnectionMobile() {
         if (!this.currentWire || !this.lastTouches) {
