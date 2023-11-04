@@ -45,7 +45,7 @@ const store = createStore({
           color: 'hsl(240, 70%, 70%)',
         },
       ],
-      nodes: [
+      nodeTypes: [
         {
           name: 'Start',
           type: 'start',
@@ -190,7 +190,7 @@ const store = createStore({
     },
     typeOf(state) {
       return (node) => {
-        return state.nodes.find(item => item.type == node.type);
+        return state.nodeTypes.find(item => item.type == node.type);
       }
     },
     numberOfType(state) {
@@ -226,22 +226,22 @@ const store = createStore({
       state.json.wires = state.json.wires.filter(wire => wire.inputNode != id && wire.outputNode != id);
       state.json.nodes = state.json.nodes.filter(node => node.id != id);
     },
-    updateNodePosition(state, node) {
-      const index = state.json.nodes.findIndex(stored => stored.id == node.id);
-      state.json.nodes[index].position = node.position;
+    updateNodePosition(state, { id, position }) {
+      const index = state.json.nodes.findIndex(node => node.id == id);
+      state.json.nodes[index].position = position;
     },
-    updateNodeBeats(state, node) {
-      const index = state.json.nodes.findIndex(stored => stored.id == node.id);
-      state.json.nodes[index].beats = node.beats;
+    updateNodeBeats(state, { id, beats }) {
+      const index = state.json.nodes.findIndex(node => node.id == id);
+      state.json.nodes[index].beats = beats;
       for (let property in state.json.nodes[index].data) {
         if (Array.isArray(state.json.nodes[index].data[property])) {
-          state.json.nodes[index].data[property] = state.json.nodes[index].data[property].filter(item => item.beats <= node.beats);
+          state.json.nodes[index].data[property] = state.json.nodes[index].data[property].filter(item => item.beats <= beats);
         }
       }
     },
-    updateNodeOrder(state, node) {
-      const index = state.json.nodes.findIndex(stored => stored.id == node.id);
-      state.json.nodes[index].order = node.order;
+    updateNodeOrder(state, { id, order }) {
+      const index = state.json.nodes.findIndex(node => node.id == id);
+      state.json.nodes[index].order = order;
     },
     updateNodeData(state, { id, data }) {
       const index = state.json.nodes.findIndex(node => node.id == id);
@@ -283,7 +283,10 @@ const store = createStore({
     },
     updateBpm(state, bpm) {
       state.json.settings.bpm = bpm;
-    }
+    },
+    updateLooping(state, looping) {
+      state.json.settings.looping = looping;
+    },
   },
 })
 

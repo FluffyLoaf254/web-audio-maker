@@ -173,7 +173,7 @@
           position.y += current.offsetTop;
           current = current.offsetParent;
         }
-        this.$emit('start-connection', this.node.id, type, param, position, color);
+        this.$emit('start-connection', event, this.node.id, type, param, position, color);
       },
       endConnectionDrag(event, type, input) {
         this.abort();

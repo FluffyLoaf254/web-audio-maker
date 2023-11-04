@@ -41,7 +41,7 @@
 
     computed: {
       foundNodes() {
-        return this.$store.state.nodes.filter(node => node.name.toLowerCase().includes(this.input.toLowerCase()));
+        return this.$store.state.nodeTypes.filter(node => node.name.toLowerCase().includes(this.input.toLowerCase()));
       },
     },
 

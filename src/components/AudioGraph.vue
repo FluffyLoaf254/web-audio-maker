@@ -21,7 +21,7 @@
       <add-menu class="absolute h-full -right-64 md:relative md:right-0 transition-all" :class="{ 'md:w-64': addMenuOpen, 'md:w-0': !addMenuOpen }" @add="addNode" />
     </div>
   </div>
-  <footer-bar @search="search" @play="play" @loop="setLooping" />
+  <footer-bar @search="search" @play="play" v-model:looping="looping" />
   <guided-tutorial ref="tutorial" />
 </div>
 </template>
@@ -54,10 +54,6 @@
 
     data() {
       return {
-        position: {
-          x: -250,
-          y: -250,
-        },
         mousePosition: {
           x: 0,
           y: 0,
@@ -74,8 +70,6 @@
           width: 0,
           height: 0,
         },
-        nodes: [],
-        wires: [],
         panning: false,
         dragRef: null,
         addMenuOpen: false,
@@ -84,8 +78,6 @@
         playing: null,
         maximized: null,
         lastTouches: null,
-        bpm: 120,
-        looping: false,
       };
     },
 
@@ -100,6 +92,38 @@
     },
 
     computed: {
+      bpm: {
+        get() {
+          return this.$store.state.json.settings.bpm;
+        },
+        set(value) {
+          this.$store.commit('updateBpm', value);
+          this.player.bpm = value;
+        },
+      },
+      looping: {
+        get() {
+          return this.$store.state.json.settings.looping;
+        },
+        set(value) {
+          this.$store.commit('updateLooping', value);
+          this.player.looping = value;
+        },
+      },
+      position: {
+        get() {
+          return this.$store.state.json.settings.position;
+        },
+        set(value) {
+          this.$store.commit('updatePosition', value);
+        }
+      },
+      nodes() {
+        return this.$store.state.json.nodes;
+      },
+      wires() {
+        return this.$store.state.json.wires;
+      },
       graphPosition() {
         const position = {
           x: 0,
@@ -163,16 +187,7 @@
         reader.readAsText(file);
       },
       reload() {
-        this.nodes = this.$store.state.json.nodes;
-        this.wires = this.$store.state.json.wires;
-        this.position = this.$store.state.json.settings.position;
         this.player = new WebAudioPlayer(this.$store.state.json);
-        this.bpm = this.$store.state.json.settings.bpm;
-        this.looping = this.$store.state.json.settings.looping;
-      },
-      changeBpm(value) {
-        this.player.bpm = value;
-        this.$store.commit('updateBpm', value);
       },
       play() {
         if (!this.player.playing) {
@@ -225,22 +240,21 @@
         };
         this.nodes.forEach(item => {
           if (item.order >= node.order && item.id != node.id) {
-            item.order -= 1;
-            this.$store.commit('updateNodeOrder', item);
+            this.$store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
           }
         });
-        node.order = this.nodes.length;
-        this.$store.commit('updateNodeOrder', node);
+        this.$store.commit('updateNodeOrder', { id: node.id, order: this.nodes.length });
         this.dragRef = node.ref;
       },
       endDrag(node) {
         if (this.dragRef != node.ref) {
           return;
         }
-        node.position.x += this.dragPosition.x;
-        node.position.y += this.dragPosition.y;
+        this.$store.commit('updateNodePosition', { id: node.id, position: {
+          x: node.position.x + this.dragPosition.x,
+          y: node.position.y + this.dragPosition.y,
+        } });
         this.dragRef = null;
-        this.$store.commit('updateNodePosition', node);
       },
       startPan(event) {
         if (this.maximized) {
@@ -263,7 +277,7 @@
           y: this.position.y,
         };
         this.panning = false;
-        this.$store.commit('updatePosition', this.finalPosition);
+        this.position = this.finalPosition;
       },
       convertPixelsToRem(pixels) {
         return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -309,7 +323,7 @@
         };
         this.$store.commit('addNode', added)
       },
-      startConnection(nodeId, outputType, output, position, color) {
+      startConnection(event, nodeId, outputType, output, position, color) {
         this.setMousePosition(event);
         const id = uuid();
         const node = this.nodes.find(node => node.id == nodeId);
@@ -352,7 +366,6 @@
         this.currentWire.input = input;
         this.currentWire.inputType = inputType;
         this.$store.commit('addWire', this.currentWire);
-        this.wires.push(this.currentWire);
         this.abortConnection();
       },
       hookConnectionMobile() {
@@ -370,17 +383,9 @@
         if (!wire) {
           return;
         }
-        const outputIndex = this.nodes.findIndex(node => node.id == wire.outputNode);
-        this.nodes[outputIndex][wire.outputType] = this.nodes[outputIndex][wire.outputType].filter(output => !(output.output == wire.output && output.node == wire.inputNode && output.type == wire.inputType && output.param == wire.input));
-        const inputIndex = this.nodes.findIndex(node => node.id == wire.inputNode);
-        this.nodes[inputIndex][wire.inputType] = this.nodes[inputIndex][wire.inputType].filter(input => !(input.input == wire.input && input.node == wire.outputNode && input.type == wire.outputType && input.param == wire.output));
-        this.wires = this.wires.filter(item => item.id != wire.id);
         this.$store.commit('removeWire', wire);
       },
       deleteNode(id) {
-        const wires = this.wires.filter(wire => wire.inputNode == id || wire.outputNode == id);
-        this.wires = this.wires.filter(wire => wire.inputNode != id && wire.outputNode != id);
-        this.nodes = this.nodes.filter(node => node.id != id);
         this.$store.commit('removeNode', id);
       },
       calculateStart(wire) {
@@ -414,11 +419,7 @@
       },
       changeBeats(nodeId, beats) {
         const node = this.nodes.find(node => node.id == nodeId);
-        node.beats = beats;
-        this.$store.commit('updateNodeBeats', node);
-      },
-      setLooping(value) {
-        this.looping = value;
+        this.$store.commit('updateNodeBeats', { id: node.id, beats: beats });
       },
       search(input) {
         const node = this.nodes.find(node => node.name.toLowerCase().includes(input.toLowerCase()));
@@ -427,19 +428,10 @@
         }
         this.position.x = -node.position.x + this.size.width / 2 - 9;
         this.position.y = -node.position.y + this.size.height / 2 - 9;
-        this.$store.commit('updatePosition', this.finalPosition);
+        this.position = this.finalPosition;
       },
       showTutorial() {
         this.$refs.tutorial.begin();
-      },
-    },
-
-    watch: {
-      bpm(value) {
-        this.player.bpm = value;
-      },
-      looping(value) {
-        this.player.looping = value;
       },
     },
   };

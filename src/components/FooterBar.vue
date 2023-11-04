@@ -11,7 +11,7 @@
         <musical-note-icon class="w-5 h-5" />
       </icon-button>
       <label class="flex items-center gap-4" data-tutorial="Use this control to enable looping of the playback.">
-        <toggle-input name="looping" v-model:checked="looping" />
+        <toggle-input name="looping" :checked="looping" @update:checked="(value) => $emit('update:looping', value)" />
         <arrow-path-icon class="w-5 h-5" :class="{ 'text-gray-500': !looping, 'text-blue-500': looping }" />
       </label>
     </div>
@@ -34,19 +34,18 @@
       FormInput,
     },
 
-    emits: ['play', 'loop', 'search'],
+    emits: ['play', 'update:looping', 'search'],
+
+    props: {
+      looping: {
+        default: false,
+      },
+    },
 
     data() {
       return {
-        looping: false,
         input: '',
       };
     },
-
-    watch: {
-      looping(value) {
-        this.$emit('loop', value);
-      },
-    }
   };
 </script>
