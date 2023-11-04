@@ -334,7 +334,10 @@
           return;
         }
 
-        if (this.currentWire.outputNode == nodeId || (inputType == 'execOut' && this.currentWire.outputType != 'execIn')) {
+        if (this.currentWire.outputNode == nodeId 
+          || (inputType == 'execIn' && this.currentWire.outputType != 'execOut') 
+          || (inputType == 'inputs' && this.currentWire.outputType != 'outputs')
+          || (inputType == 'audioParamInputs' && this.currentWire.outputType != 'audioParamOutputs')) {
           this.abortConnection();
           return;
         }
@@ -344,7 +347,6 @@
         this.currentWire.input = input;
         this.currentWire.inputType = inputType;
         this.$store.commit('addWire', this.currentWire);
-        this.wires.push(this.currentWire);
         this.abortConnection();
       },
       hookConnectionMobile() {
