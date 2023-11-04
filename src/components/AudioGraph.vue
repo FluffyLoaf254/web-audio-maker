@@ -1,6 +1,6 @@
 <template>
 <div class="grid grid-cols-1 h-screen divide-y" style="grid-template-rows: min-content minmax(0, 1fr) min-content;">
-  <header-bar @change-bpm="changeBpm" @tutorial="showTutorial">WebAudioMaker</header-bar>
+  <header-bar v-model="bpm" @tutorial="showTutorial">WebAudioMaker</header-bar>
   <div class="flex w-full h-full overflow-hidden md:overflow-visible relative">
     <div class="flex w-full h-full relative md:ml-0 transition-all md:overflow-hidden" :class="{ '-ml-64': addMenuOpen }">
       <div class="relative overflow-hidden bg-gradient-to-tr from-purple-500 to-pink-500 w-screen md:w-full h-full" ref="graph" @mousemove="setMousePosition($event)" @touchmove="setMousePosition($event)" @mouseup="abortConnection" @touchend="abortConnection">
@@ -84,6 +84,7 @@
         playing: null,
         maximized: null,
         lastTouches: null,
+        bpm: 120,
       };
     },
 
@@ -163,7 +164,10 @@
       reload() {
         this.nodes = this.$store.state.json.nodes;
         this.wires = this.$store.state.json.wires;
+        this.position = this.$store.state.json.settings.position;
         this.player = new WebAudioPlayer(this.$store.state.json);
+        this.bpm = this.$store.state.json.settings.bpm;
+        this.looping = this.$store.state.json.settings.looping;
       },
       changeBpm(value) {
         this.player.bpm = value;
@@ -408,7 +412,7 @@
         this.$store.commit('updateNodeBeats', node);
       },
       setLooping(value) {
-        this.player.looping = value;
+        this.looping = value;
       },
       search(input) {
         const node = this.nodes.find(node => node.name.toLowerCase().includes(input.toLowerCase()));
@@ -421,6 +425,15 @@
       },
       showTutorial() {
         this.$refs.tutorial.begin();
+      },
+    },
+
+    watch: {
+      bpm(value) {
+        this.player.bpm = value;
+      },
+      looping(value) {
+        this.player.looping = value;
       },
     },
   };
