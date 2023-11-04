@@ -352,6 +352,7 @@
         this.currentWire.input = input;
         this.currentWire.inputType = inputType;
         this.$store.commit('addWire', this.currentWire);
+        this.wires.push(this.currentWire);
         this.abortConnection();
       },
       hookConnectionMobile() {
@@ -369,6 +370,10 @@
         if (!wire) {
           return;
         }
+        const outputIndex = this.nodes.findIndex(node => node.id == wire.outputNode);
+        this.nodes[outputIndex][wire.outputType] = this.nodes[outputIndex][wire.outputType].filter(output => !(output.output == wire.output && output.node == wire.inputNode && output.type == wire.inputType && output.param == wire.input));
+        const inputIndex = this.nodes.findIndex(node => node.id == wire.inputNode);
+        this.nodes[inputIndex][wire.inputType] = this.nodes[inputIndex][wire.inputType].filter(input => !(input.input == wire.input && input.node == wire.outputNode && input.type == wire.outputType && input.param == wire.output));
         this.wires = this.wires.filter(item => item.id != wire.id);
         this.$store.commit('removeWire', wire);
       },
