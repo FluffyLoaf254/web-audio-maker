@@ -85,6 +85,7 @@
         maximized: null,
         lastTouches: null,
         bpm: 120,
+        looping: false,
       };
     },
 
