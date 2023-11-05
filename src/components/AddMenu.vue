@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useStore } from 'vuex';
+import { useStore } from '../store';
 import FormInput from './FormInput.vue';
 import MessageModal from './MessageModal.vue';
 import IconButton from './IconButton.vue';
