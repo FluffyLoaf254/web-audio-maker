@@ -188,6 +188,8 @@
       },
       reload() {
         this.player = new WebAudioPlayer(this.$store.state.json);
+        this.player.bpm = this.bpm;
+        this.player.looping = this.looping;
       },
       play() {
         if (!this.player.playing) {
