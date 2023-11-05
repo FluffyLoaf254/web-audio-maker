@@ -111,6 +111,18 @@
       this.setToDefaults();
     },
 
+    watch: {
+      start(value) {
+        this.updateProperties();
+      },
+      algorithm(value) {
+        this.updateProperties();
+      },
+      values(value) {
+        this.updateProperties();
+      },
+    },
+
     methods: {
       recalculateValues() {
         let object = this.newObject([]);
@@ -192,6 +204,11 @@
           return evaluate(this.algorithm, { x: this.start, n: index - 1 });
         } catch (error) {
           return 0;
+        }
+      },
+      updateProperties() {
+        if (this.modelValue.array && Array.isArray(this.modelValue.array)) {
+          this.$nextTick(() => this.$emit('update:modelValue', this.newObject([...this.modelValue.array])));
         }
       },
       newObject(array) {
