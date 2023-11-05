@@ -281,7 +281,7 @@ const store = createStore({
     updatePosition(state, position) {
       state.json.settings.position = position;
     },
-    updateBpm(state, bpm) {
+    updateBpm(state, bpm: number) {
       state.json.settings.bpm = bpm;
     },
     updateLooping(state, looping) {

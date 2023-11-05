@@ -6,7 +6,11 @@ import MessageModal from './MessageModal.vue';
 import IconButton from './IconButton.vue';
 import { InformationCircleIcon } from '@heroicons/vue/24/solid';
 
-defineEmits(['add'])
+type Emits = {
+  add: [type: any]
+}
+
+defineEmits<Emits>()
 
 let input = ref('');
 let currentNote = ref(false);

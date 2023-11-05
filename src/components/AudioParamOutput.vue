@@ -1,21 +1,21 @@
-<template>
-    <div class="flex items-center gap-2">
-        <button type="button" class="w-8 h-8 rounded-full hover:bg-gray-100 active:bg-gray-200 flex justify-center items-center">
-        <svg viewBox="-15 -15 30 30" width="25" height="25">
-            <circle cx="0" cy="0" r="12" fill="transparent" stroke="rgb(236 72 153)" stroke-width="4" :stroke-dasharray="hooked ? '0 9.7 56 9.7' : '0'" />
-            <circle v-show="Boolean(hooked)" cx="0" cy="0" r="6" fill="rgb(236 72 153)" />
-        </svg>
-        </button>
-    </div>
-</template>
+<script setup lang="ts">
+interface Props {
+  hooked?: boolean
+}
 
-<script>
-export default {
-    props: {
-        hooked: {
-            default: false,
-        },
-    },
-};
+withDefaults(defineProps<Props>(), {
+  hooked: false,
+});
 </script>
+
+<template>
+  <div class="flex items-center gap-2">
+    <button type="button" class="w-8 h-8 rounded-full hover:bg-gray-100 active:bg-gray-200 flex justify-center items-center">
+    <svg viewBox="-15 -15 30 30" width="25" height="25">
+      <circle cx="0" cy="0" r="12" fill="transparent" stroke="rgb(236 72 153)" stroke-width="4" :stroke-dasharray="hooked ? '0 9.7 56 9.7' : '0'" />
+      <circle v-show="Boolean(hooked)" cx="0" cy="0" r="6" fill="rgb(236 72 153)" />
+    </svg>
+    </button>
+  </div>
+</template>
   

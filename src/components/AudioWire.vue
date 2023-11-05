@@ -1,3 +1,29 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+
+interface Point {
+  x: number
+  y: number
+}
+
+interface Props {
+  start: Point
+  end: Point
+  color?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  color: 'black',
+});
+
+const path = computed(() => {
+  return 'M' + props.start.x + ',' + props.start.y +
+    ' C' + (props.start.x + Math.min(10, Math.abs(props.start.x - props.end.x))) + 
+    ',' + props.start.y + ' ' + (props.end.x - Math.min(10, Math.abs(props.start.x - props.end.x))) + 
+    ',' + props.end.y + ' ' + props.end.x + ',' + props.end.y;
+});
+</script>
+
 <template>
   <div class="absolute pointer-events-none" :style="{ 'z-index': 100, width: '500rem', height: '500rem' }">
     <svg viewBox="0 0 500 500" width="100%" height="100%">
@@ -5,47 +31,3 @@
     </svg>
   </div>
 </template>
-
-<script>
-  export default {
-    props: {
-      start: {
-        default: {
-          x: 0,
-          y: 0,
-        },
-      },
-      end: {
-        default: {
-          x: 0,
-          y: 0,
-        },
-      },
-      color: {
-        default: 'black',
-      },
-    },
-
-    data() {
-      return {
-        startHandler: null,
-        endHandler: null,
-      };
-    },
-
-    computed: {
-      path() {
-        return 'M' + this.start.x + ',' + this.start.y +
-          ' C' + (this.start.x + Math.min(10, Math.abs(this.start.x - this.end.x))) + 
-          ',' + this.start.y + ' ' + (this.end.x - Math.min(10, Math.abs(this.start.x - this.end.x))) + 
-          ',' + this.end.y + ' ' + this.end.x + ',' + this.end.y;
-      },
-    },
-
-    methods: {
-      lerp(start, end, alpha) {
-        return start * (1 - alpha) + end * alpha;
-      },
-    },
-  };
-</script>

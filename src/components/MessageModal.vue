@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-const props = defineProps<{
-  show?: boolean,
-  parent?: HTMLElement,
-}>();
+interface Props {
+  show: boolean
+  parent: HTMLElement
+}
 
-const emit = defineEmits(['close']);
+type Emits = {
+  close: []
+}
+
+const props = defineProps<Props>();
+
+const emit = defineEmits<Emits>();
 
 const positionStyles = computed(() => {
   const bounds = props.parent.getBoundingClientRect();

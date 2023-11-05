@@ -1,3 +1,14 @@
+<script setup lang="ts">
+interface Props {
+  hooked?: boolean
+  text: string
+}
+
+withDefaults(defineProps<Props>(), {
+  hooked: false,
+});
+</script>
+
 <template>
   <div class="flex items-center gap-2">
     <button type="button" class="w-8 h-8 rounded-full hover:bg-gray-100 active:bg-gray-200 flex justify-center items-center">
@@ -9,16 +20,3 @@
     <span>{{ text }}</span>
   </div>
 </template>
-
-<script>
-  export default {
-    props: {
-      hooked: {
-        default: false,
-      },
-      text: {
-        default: 'Unspecified',
-      },
-    },
-  };
-</script>

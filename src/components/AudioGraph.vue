@@ -1,29 +1,29 @@
 <template>
-<div class="grid grid-cols-1 h-screen divide-y" style="grid-template-rows: min-content minmax(0, 1fr) min-content;">
-  <header-bar v-model="bpm" @tutorial="showTutorial">WebAudioMaker</header-bar>
-  <div class="flex w-full h-full overflow-hidden md:overflow-visible relative">
-    <div class="flex w-full h-full relative md:ml-0 transition-all md:overflow-hidden" :class="{ '-ml-64': addMenuOpen }">
-      <div class="relative overflow-hidden bg-gradient-to-tr from-purple-500 to-pink-500 w-screen md:w-full h-full" ref="graph" @mousemove="setMousePosition($event)" @touchmove="setMousePosition($event)" @mouseup="abortConnection" @touchend="abortConnection">
-        <div class="absolute left-2 top-2 flex flex-col gap-2">
-          <save-button @click="saveJson" @mousemove.stop @touchmove.stop data-tutorial="Use this button to save your audio graph to a JSON file." />
-          <load-button @click="selectLoadJsonFile" @mousemove.stop @touchmove.stop data-tutorial="Use this button to load an audio graph from a JSON file." />
-          <input ref="loader" @change="loadJson($event)" type="file" class="hidden">
+  <div class="grid grid-cols-1 h-screen divide-y" style="grid-template-rows: min-content minmax(0, 1fr) min-content;">
+    <header-bar v-model:bpm.number="bpm" @tutorial="showTutorial">WebAudioMaker</header-bar>
+    <div class="flex w-full h-full overflow-hidden md:overflow-visible relative">
+      <div class="flex w-full h-full relative md:ml-0 transition-all md:overflow-hidden" :class="{ '-ml-64': addMenuOpen }">
+        <div class="relative overflow-hidden bg-gradient-to-tr from-purple-500 to-pink-500 w-screen md:w-full h-full" ref="graph" @mousemove="setMousePosition($event)" @touchmove="setMousePosition($event)" @mouseup="abortConnection" @touchend="abortConnection">
+          <div class="absolute left-2 top-2 flex flex-col gap-2">
+            <save-button @click="saveJson" @mousemove.stop @touchmove.stop data-tutorial="Use this button to save your audio graph to a JSON file." />
+            <load-button @click="selectLoadJsonFile" @mousemove.stop @touchmove.stop data-tutorial="Use this button to load an audio graph from a JSON file." />
+            <input ref="loader" @change="loadJson($event)" type="file" class="hidden">
+          </div>
+          <div class="bg-repeat min-w-full min-h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="width: 500rem; height: 500rem; background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'margin-left': finalPosition.x + 'rem', 'margin-top': finalPosition.y + 'rem' }">
+            <transition-group name="pop">
+              <audio-node :node="node" @mobile-connection="hookConnectionMobile" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="node.ref" :key="node.id" :style="{ 'z-index': (maximized == node.id) ? 200 : Math.floor((node.order / Math.max(1.0, nodes.length)) * 100.0), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
+            </transition-group>
+            <audio-wire :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" v-for="wire in wires" :key="wire.id" :start="calculateStart(wire)" :end="calculateEnd(wire)" :color="wire.color" />
+            <audio-wire v-if="Boolean(currentWire)" :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" :start="calculateStart(currentWire)" :end="calculateEnd(currentWire)" :color="currentWire.color" />
+          </div>
+          <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop data-tutorial="Use this button to open the menu for adding new audio graph nodes. This is the place to start." />
         </div>
-        <div class="bg-repeat min-w-full min-h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="width: 500rem; height: 500rem; background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'margin-left': finalPosition.x + 'rem', 'margin-top': finalPosition.y + 'rem' }">
-          <transition-group name="pop">
-            <audio-node :node="node" @mobile-connection="hookConnectionMobile" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="node.ref" :key="node.id" :style="{ 'z-index': (maximized == node.id) ? 200 : Math.floor((node.order / Math.max(1.0, nodes.length)) * 100.0), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
-          </transition-group>
-          <audio-wire :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" v-for="wire in wires" :key="wire.id" :start="calculateStart(wire)" :end="calculateEnd(wire)" :color="wire.color" />
-          <audio-wire v-if="Boolean(currentWire)" :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" :start="calculateStart(currentWire)" :end="calculateEnd(currentWire)" :color="currentWire.color" />
-        </div>
-        <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop data-tutorial="Use this button to open the menu for adding new audio graph nodes. This is the place to start." />
+        <add-menu class="absolute h-full -right-64 md:relative md:right-0 transition-all" :class="{ 'md:w-64': addMenuOpen, 'md:w-0': !addMenuOpen }" @add="addNode" />
       </div>
-      <add-menu class="absolute h-full -right-64 md:relative md:right-0 transition-all" :class="{ 'md:w-64': addMenuOpen, 'md:w-0': !addMenuOpen }" @add="addNode" />
     </div>
+    <footer-bar @search="search" @play="play" v-model:looping="looping" />
+    <guided-tutorial ref="tutorial" />
   </div>
-  <footer-bar @search="search" @play="play" v-model:looping="looping" />
-  <guided-tutorial ref="tutorial" />
-</div>
 </template>
 
 <script>
@@ -78,6 +78,7 @@
         playing: null,
         maximized: null,
         lastTouches: null,
+        updateBpmKey: uuid(),
       };
     },
 
@@ -97,6 +98,9 @@
           return this.$store.state.json.settings.bpm;
         },
         set(value) {
+          if (value == '' || value <= 0) {
+            return;
+          }
           this.$store.commit('updateBpm', value);
           this.player.bpm = value;
         },
