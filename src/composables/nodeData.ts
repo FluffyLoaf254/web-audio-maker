@@ -14,5 +14,5 @@ export function useNodeData(id: string, node: Ref<Node | null>, data: Ref<NodeDa
     }
   });
 
-  watch(data, value => store.commit('updateNodeData', { id, data: value }))
+  watch(data, value => store.commit('updateNodeData', { id, data: value }), { deep: true });
 };
