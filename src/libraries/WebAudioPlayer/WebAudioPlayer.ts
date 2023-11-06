@@ -197,7 +197,6 @@ class WebAudioPlayer {
 
       return node;
     }).filter(node => node.scheduling);
-    console.log(this.beat, scheduling);
     if (scheduling.length == 0) {
       return;
     }

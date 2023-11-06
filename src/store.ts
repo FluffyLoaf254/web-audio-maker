@@ -229,7 +229,6 @@ export const store = createStore<State>({
       state.json.nodes.push(node);
     },
     removeNode(state: State, id: string) {
-      state.json.wires = state.json.wires.filter(wire => wire.inputNode != id && wire.outputNode != id);
       state.json.nodes = state.json.nodes.filter(node => node.id != id);
     },
     updateNodePosition(state: State, { id, position }: { id: string, position: Position }) {
@@ -288,6 +287,15 @@ export const store = createStore<State>({
     },
     updateLooping(state: State, looping: boolean) {
       state.json.settings.looping = looping;
+    },
+  },
+
+  actions: {
+    removeNode(context, id: string) {
+      context.state.json.wires
+        .filter(wire => wire.inputNode == id || wire.outputNode == id)
+        .forEach(wire => this.commit('removeWire', wire));
+      context.commit('removeNode', id);
     },
   },
 });

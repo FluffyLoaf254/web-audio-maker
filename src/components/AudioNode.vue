@@ -121,6 +121,8 @@
         dragging: null,
         noteShown: false,
         noteParent: null,
+        width: 0,
+        height: 0,
       };
     },
 
@@ -135,12 +137,16 @@
         return this.maximized ? 'cursor-auto rounded-none !left-0 !top-0 min-h-0 min-w-0' + this.extraClasses : 'min-h-max min-w-max w-auto h-auto';
       },
       transitionStyles() {
-        return this.recentlyTransitioned ? 'width: 15rem; height: 14rem; transition: left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease;' : 'transition: none;';
+        return this.recentlyTransitioned ? 'width: ' + this.width + 'px; height: ' + this.height + 'px; transition: left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease;' : 'transition: none;';
       },
     },
 
     watch: {
       maximized(value) {
+        if (value) {
+          this.width = this.$refs.container.offsetWidth;
+          this.height = this.$refs.container.offsetHeight;
+        }
         this.recentlyTransitioned = true;
         setTimeout(() => this.recentlyTransitioned = false, 500);
         if (value) {

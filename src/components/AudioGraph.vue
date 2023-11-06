@@ -398,7 +398,7 @@
             this.$store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
           }
         });
-        this.$store.commit('removeNode', id);
+        this.$store.dispatch('removeNode', id);
       },
       calculateStart(wire) {
         let outputNode = this.nodes.find(node => node.id == wire.outputNode);
