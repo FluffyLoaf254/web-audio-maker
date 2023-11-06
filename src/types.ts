@@ -71,6 +71,13 @@ export interface Node {
   type: string
 };
 
+export interface NodeTrackingInformation {
+  start: number
+  playing: boolean
+  scheduling: boolean
+  object: AudioNode | null
+}
+
 export interface Wire {
   id: string
   outputNode: string

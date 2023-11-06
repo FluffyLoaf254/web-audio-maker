@@ -392,6 +392,12 @@
         this.$store.commit('removeWire', wire);
       },
       deleteNode(id) {
+        const node = this.nodes.find(node => node.id == id);
+        this.nodes.forEach(item => {
+          if (item.order >= node.order && item.id != node.id) {
+            this.$store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
+          }
+        });
         this.$store.commit('removeNode', id);
       },
       calculateStart(wire) {
