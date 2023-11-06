@@ -1,3 +1,453 @@
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref, computed, onBeforeUpdate } from 'vue';
+import AddButton from './AddButton.vue';
+import AddMenu from './AddMenu.vue';
+import AudioNode from './AudioNode.vue';
+import AudioWire from './AudioWire.vue';
+import FooterBar from './FooterBar.vue';
+import GuidedTutorial from './GuidedTutorial.vue';
+import HeaderBar from './HeaderBar.vue';
+import LoadButton from './LoadButton.vue';
+import SaveButton from './SaveButton.vue';
+import { v4 as uuid } from 'uuid';
+import { WebAudioPlayer } from '../libraries/WebAudioPlayer';
+import { useStore } from '../store';
+
+const store = useStore();
+
+const mousePosition = ref({
+  x: 0,
+  y: 0,
+});
+const panStartPosition = ref({
+  x: 0,
+  y: 0,
+});
+const dragStartPosition = ref({
+  x: 0,
+  y: 0,
+});
+const size = ref({
+  width: 0,
+  height: 0,
+});
+const panning = ref(false);
+const dragRef = ref(null);
+const addMenuOpen = ref(false);
+const currentWire = ref(null);
+const playing = ref(null);
+const maximized = ref(null);
+const lastTouches = ref(null);
+const graph = ref(null);
+
+let player = null;
+
+const setSize = () => {
+  size.value.width = convertPixelsToRem(graph.value.clientWidth);
+  size.value.height = convertPixelsToRem(graph.value.clientHeight);
+};
+
+onMounted(() => {
+  setSize();
+  window.addEventListener('resize', setSize);
+  reload();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', setSize);
+});
+
+const bpm = computed({
+  get() {
+    return store.state.json.settings.bpm;
+  },
+  set(value) {
+    if (value == '' || value <= 0) {
+      return;
+    }
+    store.commit('updateBpm', value);
+    player.bpm = value;
+  },
+});
+
+const looping = computed({
+  get() {
+    return store.state.json.settings.looping;
+  },
+  set(value) {
+    store.commit('updateLooping', value);
+    player.looping = value;
+  },
+});
+
+const position = computed({
+  get() {
+    return store.state.json.settings.position;
+  },
+  set(value) {
+    store.commit('updatePosition', value);
+  },
+});
+
+const nodes = computed(() => {
+  return store.state.json.nodes;
+});
+
+const wires = computed(() => {
+  return store.state.json.wires;
+});
+
+const graphPosition = computed(() => {
+  const position = {
+    x: 0,
+    y: 0,
+  };
+  let rect = graph.value.getBoundingClientRect();
+  position.x = rect.x;
+  position.y = rect.y;
+
+  return position;
+});
+
+const dragPosition = computed(() => {
+  return {
+    x: mousePosition.value.x - dragStartPosition.value.x,
+    y: mousePosition.value.y - dragStartPosition.value.y,
+  };
+});
+
+const panPosition = computed(() => {
+  return {
+    x: panning.value ? mousePosition.value.x - panStartPosition.value.x : 0,
+    y: panning.value ? mousePosition.value.y - panStartPosition.value.y : 0,
+  };
+});
+
+const finalPosition = computed({
+  get() {
+    return {
+      x: Math.min(0, Math.max(-500 + size.value.width, position.value.x + panPosition.value.x)),
+      y: Math.min(0, Math.max(-500 + size.value.height, position.value.y + panPosition.value.y)),
+    };
+  },
+  set(value) {
+    position.value.x = Math.min(0, Math.max(-500 + size.value.width, value.x + panPosition.value.x));
+    position.value.y = Math.min(0, Math.max(-500 + size.value.height, value.y + panPosition.value.y));
+  },  
+});
+
+const saveJson = () => {
+  let blob = new Blob([JSON.stringify(store.state.json)], { type: "application/json" });
+  let url = URL.createObjectURL(blob);
+  let link = document.createElement('a');
+  link.href = url;
+  link.download = 'audio-graph.json';
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const loader = ref(null);
+
+const selectLoadJsonFile = () => {
+  loader.value.click();
+};
+
+const loadJson = (event) => {
+  const file = event.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = (event) => {
+    const json = JSON.parse(event.target.result as string);
+    store.commit('load', json);
+    reload();
+  };
+
+  reader.readAsText(file);
+};
+
+const reload = () => {
+  player = new WebAudioPlayer(store.state.json);
+  player.bpm = bpm.value;
+  player.looping = looping.value;
+};
+
+const play = () => {
+  if (!player.playing) {
+    playing.value = null;
+  }
+  player.stop();
+  if (playing.value == 'play') {
+    playing.value = null;
+    return;
+  }
+  player.play();
+  playing.value = 'play';
+};
+
+const playUpTo = (nodeId) => {
+  if (!player.playing) {
+    playing.value = null;
+  }
+  player.stop();
+  if (playing.value == 'playUpTo') {
+    playing.value = null;
+    return;
+  }
+  player.playUpTo(nodeId);
+  playing.value = 'playUpTo';
+};
+
+const playNode = (id) => {
+  if (!player.playing) {
+    playing.value = null;
+  }
+  player.stop();
+  if (playing.value == 'playNode') {
+    playing.value = null;
+    return;
+  }
+  player.playNode(id);
+  playing.value = 'playNode';
+};
+
+const startDrag = (event, node) => {
+  if (Boolean(maximized.value)) {
+    return;
+  }
+  setMousePosition(event);
+  dragStartPosition.value = {
+    x: mousePosition.value.x,
+    y: mousePosition.value.y,
+  };
+  nodes.value.forEach(item => {
+    if (item.order >= node.order && item.id != node.id) {
+      store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
+    }
+  });
+  store.commit('updateNodeOrder', { id: node.id, order: nodes.value.length });
+  dragRef.value = node.ref;
+};
+
+const endDrag = (node) => {
+  if (dragRef.value != node.ref) {
+    return;
+  }
+  store.commit('updateNodePosition', { id: node.id, position: {
+    x: node.position.x + dragPosition.value.x,
+    y: node.position.y + dragPosition.value.y,
+  } });
+  dragRef.value = null;
+};
+
+const startPan = (event) => {
+  if (maximized.value) {
+    return;
+  }
+  setMousePosition(event);
+  panStartPosition.value = {
+    x: mousePosition.value.x,
+    y: mousePosition.value.y,
+  };
+  panning.value = true;
+};
+
+const endPan = () => {
+  if (dragRef.value) {
+    endDrag(nodes.value.find(node => node.ref == dragRef.value));
+    return;
+  }
+  finalPosition.value = {
+    x: position.value.x,
+    y: position.value.y,
+  };
+  panning.value = false;
+  position.value = finalPosition.value;
+};
+
+const convertPixelsToRem = (pixels) => {
+  return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
+};
+
+const setMousePosition = (event) => {
+  if (event.touches) {
+    lastTouches.value = event.touches;
+    mousePosition.value = {
+      x: convertPixelsToRem(event.touches[0].pageX - graphPosition.value.x),
+      y: convertPixelsToRem(event.touches[0].pageY - graphPosition.value.y),
+    };
+  } else {
+    mousePosition.value = {
+      x: convertPixelsToRem(event.offsetX - graphPosition.value.x),
+      y: convertPixelsToRem(event.offsetY - graphPosition.value.y),
+    };
+    
+    let rect = event.target.getBoundingClientRect();
+
+    mousePosition.value.x += convertPixelsToRem(rect.x);
+    mousePosition.value.y += convertPixelsToRem(rect.y);
+  }
+};
+
+const addNode = (node) => {
+  const id = uuid();
+  const added = {
+    id,
+    position: {
+      x: (size.value.width / 2) - 9 - finalPosition.value.x,
+      y: (size.value.height / 2) - 9 - finalPosition.value.y,
+    },
+    ref: 'node-' + id,
+    order: nodes.value.length + 1,
+    outputs: [],
+    inputs: [],
+    audioParamInputs: [],
+    audioParamOutputs: [],
+    execIn: [],
+    execOut: [],
+    data: {},
+    beats: node.beats,
+    type: node.type,
+  };
+  store.commit('addNode', added)
+};
+
+const startConnection = (event, nodeId, outputType, output, position, color) => {
+  setMousePosition(event);
+  const id = uuid();
+  const node = nodes.value.find(node => node.id == nodeId);
+  currentWire.value = {
+    id,
+    outputNode: node.id,
+    outputPosition: position,
+    output,
+    outputType,
+    inputNode: null,
+    inputPosition: null,
+    input: null,
+    inputType: null,
+    color,
+  };
+};
+
+const nodeRefs = ref([]);
+
+onBeforeUpdate(() => {
+  nodeRefs.value = [];
+});
+
+const abortConnection = () => {
+  if (!currentWire.value) {
+    return;
+  }
+
+  nodeRefs.value[nodes.value.find(node => node.id == currentWire.value.outputNode).ref].abort();
+  currentWire.value = null;
+};
+
+const hookConnection = (nodeId, inputType, input, position) => {
+  if (!currentWire.value) {
+    return;
+  }
+
+  if (currentWire.value.outputNode == nodeId 
+    || (inputType == 'execIn' && currentWire.value.outputType != 'execOut') 
+    || (inputType == 'inputs' && currentWire.value.outputType != 'outputs')
+    || (inputType == 'audioParamInputs' && currentWire.value.outputType != 'audioParamOutputs')) {
+    abortConnection();
+    return;
+  }
+
+  currentWire.value.inputNode = nodeId;
+  currentWire.value.inputPosition = position;
+  currentWire.value.input = input;
+  currentWire.value.inputType = inputType;
+  store.commit('addWire', currentWire.value);
+  abortConnection();
+};
+
+const hookConnectionMobile = () => {
+  if (!currentWire.value || !lastTouches.value) {
+    return;
+  }
+  const element = document.elementFromPoint(lastTouches.value[0].pageX, lastTouches.value[0].pageY);
+  if (element) {
+    const event = new Event('mouseup', { 'bubbles': true, 'cancelable': true });
+    element.dispatchEvent(event);
+  }
+};
+
+const deleteConnection = (nodeId, type, param) => {
+  const wire = wires.value.find(wire => wire.inputNode == nodeId && wire.inputType == type && wire.input == param);
+  if (!wire) {
+    return;
+  }
+  store.commit('removeWire', wire);
+};
+
+const deleteNode = (id) => {
+  const node = nodes.value.find(node => node.id == id);
+  nodes.value.forEach(item => {
+    if (item.order >= node.order && item.id != node.id) {
+      store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
+    }
+  });
+  store.dispatch('removeNode', id);
+};
+
+const calculateStart = (wire) => {
+  let outputNode = nodes.value.find(node => node.id == wire.outputNode);
+  return {
+    x: outputNode.position.x + (outputNode.ref == dragRef.value ? dragPosition.value.x : 0) + convertPixelsToRem(wire.outputPosition.x),
+    y: outputNode.position.y + (outputNode.ref == dragRef.value ? dragPosition.value.y : 0) + convertPixelsToRem(wire.outputPosition.y),
+  };
+};
+
+const calculateEnd = (wire) => {
+  let inputNode = nodes.value.find(node => node.id == wire.inputNode);
+  return currentWire.value?.id == wire.id ? {
+    x: mousePosition.value.x - finalPosition.value.x,
+    y: mousePosition.value.y - finalPosition.value.y,
+  } : {
+    x: inputNode.position.x + (inputNode.ref == dragRef.value ? dragPosition.value.x : 0) + convertPixelsToRem(wire.inputPosition.x),
+    y: inputNode.position.y + (inputNode.ref == dragRef.value ? dragPosition.value.y : 0) +  convertPixelsToRem(wire.inputPosition.y),
+  };
+};
+
+const handleMaximized = (nodeId) => {
+  if (playing.value != 'play') {
+    player.stop();
+    playing.value = null;
+  }
+  if (nodeId) {
+    addMenuOpen.value = false;
+    maximized.value = nodeId;
+  } else {
+    maximized.value = null;
+  }
+};
+
+const changeBeats = (nodeId, beats) => {
+  const node = nodes.value.find(node => node.id == nodeId);
+  store.commit('updateNodeBeats', { id: node.id, beats: beats });
+};
+
+const search = (input) => {
+  const node = nodes.value.find(node => node.name.toLowerCase().includes(input.toLowerCase()));
+  if (!node) {
+    return;
+  }
+  position.value.x = -node.position.x + size.value.width / 2 - 9;
+  position.value.y = -node.position.y + size.value.height / 2 - 9;
+  position.value = finalPosition.value;
+};
+
+const tutorial = ref(null);
+
+const showTutorial = () => {
+  tutorial.value.begin();
+};
+</script>
+
 <template>
   <div class="grid grid-cols-1 h-screen divide-y" style="grid-template-rows: min-content minmax(0, 1fr) min-content;">
     <header-bar v-model:bpm.number="bpm" @tutorial="showTutorial">WebAudioMaker</header-bar>
@@ -11,7 +461,7 @@
           </div>
           <div class="bg-repeat min-w-full min-h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="width: 500rem; height: 500rem; background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'margin-left': finalPosition.x + 'rem', 'margin-top': finalPosition.y + 'rem' }">
             <transition-group name="pop">
-              <audio-node :node="node" @mobile-connection="hookConnectionMobile" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="node.ref" :key="node.id" :style="{ 'z-index': (maximized == node.id) ? 200 : Math.floor((node.order / Math.max(1.0, nodes.length)) * 100.0), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
+              <audio-node :node="node" @mobile-connection="hookConnectionMobile" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="el => nodeRefs[node.ref] = el" :key="node.id" :style="{ 'z-index': (maximized == node.id) ? 200 : Math.floor((node.order / Math.max(1.0, nodes.length)) * 100.0), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
             </transition-group>
             <audio-wire :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" v-for="wire in wires" :key="wire.id" :start="calculateStart(wire)" :end="calculateEnd(wire)" :color="wire.color" />
             <audio-wire v-if="Boolean(currentWire)" :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" :start="calculateStart(currentWire)" :end="calculateEnd(currentWire)" :color="currentWire.color" />
@@ -25,426 +475,3 @@
     <guided-tutorial ref="tutorial" />
   </div>
 </template>
-
-<script>
-  import AddButton from './AddButton.vue';
-  import AddMenu from './AddMenu.vue';
-  import AudioNode from './AudioNode.vue';
-  import AudioWire from './AudioWire.vue';
-  import FooterBar from './FooterBar.vue';
-  import GuidedTutorial from './GuidedTutorial.vue';
-  import HeaderBar from './HeaderBar.vue';
-  import LoadButton from './LoadButton.vue';
-  import SaveButton from './SaveButton.vue';
-  import { v4 as uuid } from 'uuid';
-  import { WebAudioPlayer } from '../libraries/WebAudioPlayer';
-
-  export default {
-    components: {
-      AddButton,
-      AddMenu,
-      AudioNode,
-      AudioWire,
-      FooterBar,
-      GuidedTutorial,
-      HeaderBar,
-      LoadButton,
-      SaveButton,
-    },
-
-    data() {
-      return {
-        mousePosition: {
-          x: 0,
-          y: 0,
-        },
-        panStartPosition: {
-          x: 0,
-          y: 0,
-        },
-        dragStartPosition: {
-          x: 0,
-          y: 0,
-        },
-        size: {
-          width: 0,
-          height: 0,
-        },
-        panning: false,
-        dragRef: null,
-        addMenuOpen: false,
-        currentWire: null,
-        player: null,
-        playing: null,
-        maximized: null,
-        lastTouches: null,
-        updateBpmKey: uuid(),
-      };
-    },
-
-    mounted() {
-      this.setSize();
-      window.addEventListener('resize', this.setSize);
-      this.reload();
-    },
-
-    unmounted() {
-      window.removeEventListener('resize', this.setSize);
-    },
-
-    computed: {
-      bpm: {
-        get() {
-          return this.$store.state.json.settings.bpm;
-        },
-        set(value) {
-          if (value == '' || value <= 0) {
-            return;
-          }
-          this.$store.commit('updateBpm', value);
-          this.player.bpm = value;
-        },
-      },
-      looping: {
-        get() {
-          return this.$store.state.json.settings.looping;
-        },
-        set(value) {
-          this.$store.commit('updateLooping', value);
-          this.player.looping = value;
-        },
-      },
-      position: {
-        get() {
-          return this.$store.state.json.settings.position;
-        },
-        set(value) {
-          this.$store.commit('updatePosition', value);
-        }
-      },
-      nodes() {
-        return this.$store.state.json.nodes;
-      },
-      wires() {
-        return this.$store.state.json.wires;
-      },
-      graphPosition() {
-        const position = {
-          x: 0,
-          y: 0,
-        };
-        let rect = this.$refs.graph.getBoundingClientRect();
-        position.x = rect.x;
-        position.y = rect.y;
-
-        return position;
-      },
-      dragPosition() {
-        return {
-          x: this.mousePosition.x - this.dragStartPosition.x,
-          y: this.mousePosition.y - this.dragStartPosition.y,
-        };
-      },
-      panPosition() {
-        return {
-          x: this.panning ? this.mousePosition.x - this.panStartPosition.x : 0,
-          y: this.panning ? this.mousePosition.y - this.panStartPosition.y : 0,
-        };
-      },
-      finalPosition: {
-        get() {
-          return {
-            x: Math.min(0, Math.max(-500 + this.size.width, this.position.x + this.panPosition.x)),
-            y: Math.min(0, Math.max(-500 + this.size.height, this.position.y + this.panPosition.y)),
-          };
-        },
-        set(value) {
-          this.position.x = Math.min(0, Math.max(-500 + this.size.width, value.x + this.panPosition.x));
-          this.position.y = Math.min(0, Math.max(-500 + this.size.height, value.y + this.panPosition.y));
-        },  
-      },
-    },
-
-    methods: {
-      saveJson() {
-        let blob = new Blob([JSON.stringify(this.$store.state.json)], { type: "application/json" });
-        let url = URL.createObjectURL(blob);
-        let link = document.createElement('a');
-        link.href = url;
-        link.download = 'audio-graph.json';
-        link.click();
-        URL.revokeObjectURL(url);
-      },
-      selectLoadJsonFile() {
-        this.$refs.loader.click();
-      },
-      loadJson(event) {
-        const file = event.target.files[0];
-        const reader = new FileReader();
-
-        reader.onload = (event) => {
-          const json = JSON.parse(event.target.result);
-          this.$store.commit('load', json);
-          this.reload();
-        };
-
-        reader.readAsText(file);
-      },
-      reload() {
-        this.player = new WebAudioPlayer(this.$store.state.json);
-        this.player.bpm = this.bpm;
-        this.player.looping = this.looping;
-      },
-      play() {
-        if (!this.player.playing) {
-          this.playing = null;
-        }
-        this.player.stop();
-        if (this.playing == 'play') {
-          this.playing = null;
-          return;
-        }
-        this.player.play();
-        this.playing = 'play';
-      },
-      playUpTo(nodeId) {
-        if (!this.player.playing) {
-          this.playing = null;
-        }
-        this.player.stop();
-        if (this.playing == 'playUpTo') {
-          this.playing = null;
-          return;
-        }
-        this.player.playUpTo(nodeId);
-        this.playing = 'playUpTo';
-      },
-      playNode(id) {
-        if (!this.player.playing) {
-          this.playing = null;
-        }
-        this.player.stop();
-        if (this.playing == 'playNode') {
-          this.playing = null;
-          return;
-        }
-        this.player.playNode(id);
-        this.playing = 'playNode';
-      },
-      setSize() {
-        this.size.width = this.convertPixelsToRem(this.$refs.graph.clientWidth);
-        this.size.height = this.convertPixelsToRem(this.$refs.graph.clientHeight);
-      },
-      startDrag(event, node) {
-        if (this.maximized) {
-          return;
-        }
-        this.setMousePosition(event);
-        this.dragStartPosition = {
-          x: this.mousePosition.x,
-          y: this.mousePosition.y,
-        };
-        this.nodes.forEach(item => {
-          if (item.order >= node.order && item.id != node.id) {
-            this.$store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
-          }
-        });
-        this.$store.commit('updateNodeOrder', { id: node.id, order: this.nodes.length });
-        this.dragRef = node.ref;
-      },
-      endDrag(node) {
-        if (this.dragRef != node.ref) {
-          return;
-        }
-        this.$store.commit('updateNodePosition', { id: node.id, position: {
-          x: node.position.x + this.dragPosition.x,
-          y: node.position.y + this.dragPosition.y,
-        } });
-        this.dragRef = null;
-      },
-      startPan(event) {
-        if (this.maximized) {
-          return;
-        }
-        this.setMousePosition(event);
-        this.panStartPosition = {
-          x: this.mousePosition.x,
-          y: this.mousePosition.y,
-        };
-        this.panning = true;
-      },
-      endPan() {
-        if (this.dragRef) {
-          this.endDrag(this.nodes.find(node => node.ref == this.dragRef));
-          return;
-        }
-        this.finalPosition = {
-          x: this.position.x,
-          y: this.position.y,
-        };
-        this.panning = false;
-        this.position = this.finalPosition;
-      },
-      convertPixelsToRem(pixels) {
-        return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
-      },
-      setMousePosition(event) {
-        if (event.touches) {
-          this.lastTouches = event.touches;
-          this.mousePosition = {
-            x: this.convertPixelsToRem(event.touches[0].pageX - this.graphPosition.x),
-            y: this.convertPixelsToRem(event.touches[0].pageY - this.graphPosition.y),
-          };
-        } else {
-          this.mousePosition = {
-            x: this.convertPixelsToRem(event.offsetX - this.graphPosition.x),
-            y: this.convertPixelsToRem(event.offsetY - this.graphPosition.y),
-          };
-          
-          let rect = event.target.getBoundingClientRect();
-
-          this.mousePosition.x += this.convertPixelsToRem(rect.x);
-          this.mousePosition.y += this.convertPixelsToRem(rect.y);
-        }
-      },
-      addNode(node) {
-        const id = uuid();
-        const added = {
-          id,
-          position: {
-            x: (this.size.width / 2) - 9 - this.finalPosition.x,
-            y: (this.size.height / 2) - 9 - this.finalPosition.y,
-          },
-          ref: 'node-' + id,
-          order: this.nodes.length + 1,
-          outputs: [],
-          inputs: [],
-          audioParamInputs: [],
-          audioParamOutputs: [],
-          execIn: [],
-          execOut: [],
-          data: {},
-          beats: node.beats,
-          type: node.type,
-        };
-        this.$store.commit('addNode', added)
-      },
-      startConnection(event, nodeId, outputType, output, position, color) {
-        this.setMousePosition(event);
-        const id = uuid();
-        const node = this.nodes.find(node => node.id == nodeId);
-        this.currentWire = {
-          id,
-          outputNode: node.id,
-          outputPosition: position,
-          output,
-          outputType,
-          inputNode: null,
-          inputPosition: null,
-          input: null,
-          inputType: null,
-          color,
-        };
-      },
-      abortConnection() {
-        if (!this.currentWire) {
-          return;
-        }
-
-        this.$refs[this.nodes.find(node => node.id == this.currentWire.outputNode).ref][0].abort();
-        this.currentWire = null;
-      },
-      hookConnection(nodeId, inputType, input, position) {
-        if (!this.currentWire) {
-          return;
-        }
-
-        if (this.currentWire.outputNode == nodeId 
-          || (inputType == 'execIn' && this.currentWire.outputType != 'execOut') 
-          || (inputType == 'inputs' && this.currentWire.outputType != 'outputs')
-          || (inputType == 'audioParamInputs' && this.currentWire.outputType != 'audioParamOutputs')) {
-          this.abortConnection();
-          return;
-        }
-
-        this.currentWire.inputNode = nodeId;
-        this.currentWire.inputPosition = position;
-        this.currentWire.input = input;
-        this.currentWire.inputType = inputType;
-        this.$store.commit('addWire', this.currentWire);
-        this.abortConnection();
-      },
-      hookConnectionMobile() {
-        if (!this.currentWire || !this.lastTouches) {
-          return;
-        }
-        const element = document.elementFromPoint(this.lastTouches[0].pageX, this.lastTouches[0].pageY);
-        if (element) {
-          const event = new Event('mouseup', { 'bubbles': true, 'cancelable': true });
-          element.dispatchEvent(event);
-        }
-      },
-      deleteConnection(nodeId, type, param) {
-        const wire = this.wires.find(wire => wire.inputNode == nodeId && wire.inputType == type && wire.input == param);
-        if (!wire) {
-          return;
-        }
-        this.$store.commit('removeWire', wire);
-      },
-      deleteNode(id) {
-        const node = this.nodes.find(node => node.id == id);
-        this.nodes.forEach(item => {
-          if (item.order >= node.order && item.id != node.id) {
-            this.$store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
-          }
-        });
-        this.$store.dispatch('removeNode', id);
-      },
-      calculateStart(wire) {
-        let outputNode = this.nodes.find(node => node.id == wire.outputNode);
-        return {
-          x: outputNode.position.x + (outputNode.ref == this.dragRef ? this.dragPosition.x : 0) + this.convertPixelsToRem(wire.outputPosition.x),
-          y: outputNode.position.y + (outputNode.ref == this.dragRef ? this.dragPosition.y : 0) + this.convertPixelsToRem(wire.outputPosition.y),
-        };
-      },
-      calculateEnd(wire) {
-        let inputNode = this.nodes.find(node => node.id == wire.inputNode);
-        return this.currentWire?.id == wire.id ? {
-          x: this.mousePosition.x - this.finalPosition.x,
-          y: this.mousePosition.y - this.finalPosition.y,
-        } : {
-          x: inputNode.position.x + (inputNode.ref == this.dragRef ? this.dragPosition.x : 0) + this.convertPixelsToRem(wire.inputPosition.x),
-          y: inputNode.position.y + (inputNode.ref == this.dragRef ? this.dragPosition.y : 0) +  this.convertPixelsToRem(wire.inputPosition.y),
-        };
-      },
-      handleMaximized(nodeId) {
-        if (this.playing != 'play') {
-          this.player.stop();
-          this.playing = null;
-        }
-        if (nodeId) {
-          this.addMenuOpen = false;
-          this.maximized = nodeId;
-        } else {
-          this.maximized = null;
-        }
-      },
-      changeBeats(nodeId, beats) {
-        const node = this.nodes.find(node => node.id == nodeId);
-        this.$store.commit('updateNodeBeats', { id: node.id, beats: beats });
-      },
-      search(input) {
-        const node = this.nodes.find(node => node.name.toLowerCase().includes(input.toLowerCase()));
-        if (!node) {
-          return;
-        }
-        this.position.x = -node.position.x + this.size.width / 2 - 9;
-        this.position.y = -node.position.y + this.size.height / 2 - 9;
-        this.position = this.finalPosition;
-      },
-      showTutorial() {
-        this.$refs.tutorial.begin();
-      },
-    },
-  };
-</script>

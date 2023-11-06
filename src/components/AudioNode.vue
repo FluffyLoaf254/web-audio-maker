@@ -1,3 +1,160 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import { useStore } from '../store';
+import NodeInput from './NodeInput.vue';
+import NodeOutput from './NodeOutput.vue';
+import AudioParamInput from './AudioParamInput.vue';
+import AudioParamOutput from './AudioParamOutput.vue';
+import ExecInPin from './ExecInPin.vue';
+import ExecOutPin from './ExecOutPin.vue';
+import IconButton from './IconButton.vue';
+import FormInput from './FormInput.vue';
+import InputLabel from './InputLabel.vue';
+import MessageModal from './MessageModal.vue';
+import { ArrowDownIcon, ArrowsPointingOutIcon, InformationCircleIcon, MusicalNoteIcon, XMarkIcon } from '@heroicons/vue/24/solid';
+import { type InputType, type Node, type OutputType, type Position } from '../types';
+import { watch } from 'vue';
+
+interface Props {
+  node: Node
+}
+
+type Emits = {
+  mobileConnection: []
+  startConnection: [event: Event, id: string, type: OutputType, param: string | number, position: Position, color: string]
+  hookConnection: [id: string, type: InputType, param: string | number, position: Position]
+  abortConnection: []
+  deleteConnection: [id: string, type: InputType, param: string | number]
+  deleteNode: [id: string]
+  playNode: [id: string]
+  playUpToNode: [id: string]
+  maximized: [id: string | null]
+  changeBeats: [id: string, beats: number]
+}
+
+const props = defineProps<Props>();
+
+const emit = defineEmits<Emits>();
+
+const maximized = ref(false);
+const recentlyTransitioned = ref(false);
+const extraClasses = ref('');
+const dragging = ref(null);
+const noteShown = ref(false);
+const noteParent = ref(null);
+const width = ref(0);
+const height = ref(0);
+
+const container = ref(null);
+
+const store = useStore();
+
+const typeObject = computed(() => {
+  return store.getters.typeOf(props.node);
+});
+const categoryObject = computed(() => {
+  return store.getters.categoryOf(typeObject.value);
+});
+const maximizedClasses = computed(() => {
+  return maximized.value ? 'cursor-auto rounded-none !left-0 !top-0 min-h-0 min-w-0' + extraClasses.value : 'min-h-max min-w-max w-auto h-auto';
+});
+const transitionStyles = computed(() => {
+  return recentlyTransitioned.value ? 'width: ' + width.value + 'px; height: ' + height.value + 'px; transition: left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease;' : 'transition: none;';
+});
+
+watch(maximized, (value) => {
+  if (value) {
+    width.value = container.value.offsetWidth;
+    height.value = container.value.offsetHeight;
+  }
+  recentlyTransitioned.value = true;
+  setTimeout(() => recentlyTransitioned.value = false, 500);
+  if (value) {
+    setTimeout(() => extraClasses.value = ' !h-full !w-full', 10);
+    emit('maximized', props.node.id);
+  } else {
+    extraClasses.value = '';
+    emit('maximized', null);
+  }
+});
+
+const abort = () => {
+  dragging.value = null;
+};
+
+const startConnectionDrag = (event, type, param, color) => {
+  dragging.value = { type, param };
+  const position = {
+    x: 16,
+    y: 16,
+  };
+  let current = event.target;
+  while (current != container.value) {
+    if (!(current instanceof HTMLElement)) {
+      current = current.parentNode;
+      continue;
+    }
+    position.x += current.offsetLeft;
+    position.y += current.offsetTop;
+    current = current.offsetParent;
+  }
+  emit('startConnection', event, props.node.id, type, param, position, color);
+};
+
+const isHooked = (type, param) => {
+  return (dragging.value && dragging.value.type == type && dragging.value.param == param)
+    || props.node[type].some(connection => (connection.input || connection.output) == param);
+};
+
+const endConnectionDrag = (event, type, input) => {
+  abort();
+  if (isHooked(type, input)) {
+    emit('abortConnection');
+    return;
+  }
+  const position = {
+    x: 16,
+    y: 16,
+  };
+  let current = event.target;
+  while (current != container.value) {
+    if (!(current instanceof HTMLElement)) {
+      current = current.parentNode;
+      continue;
+    }
+    position.x += current.offsetLeft;
+    position.y += current.offsetTop;
+    current = current.offsetParent;
+  }
+  emit('hookConnection', props.node.id, type, input, position);
+};
+
+const endConnectionMobile = () => {
+  emit('mobileConnection');
+};
+
+const playNode = () => {
+  emit('playNode', props.node.id);
+};
+
+const playUpToNode = () => {
+  emit('playUpToNode', props.node.id);
+};
+
+const changeBeats = (beats) => {
+  emit('changeBeats', props.node.id, beats);
+};
+
+const showNote = (event) => {
+  noteParent.value = event.target;
+  noteShown.value = true;
+};
+
+defineExpose({
+  abort,
+});
+</script>
+
 <template>
   <div class="select-none absolute cursor-move overflow-hidden bg-gray-50 shadow-md rounded" :class="maximizedClasses" ref="container" :style="transitionStyles">
     <div v-if="!maximized" class="flex flex-col h-full">
@@ -11,16 +168,16 @@
           <icon-button v-if="typeObject.component" @mousedown.stop @touchstart.stop @click="maximized = true">
             <arrows-pointing-out-icon class="h-5 w-5" />
           </icon-button>
-          <icon-button @mousedown.stop @touchstart.stop @click="$emit('delete-node', node.id)">
+          <icon-button @mousedown.stop @touchstart.stop @click="$emit('deleteNode', node.id)">
             <x-mark-icon class="h-5 w-5" />
           </icon-button>
         </div>
       </div>
       <div class="flex-grow h-full grid grid-cols-2 divide-x p-4">
         <div class="flex flex-col items-start gap-2 pr-4">
-          <exec-in-pin v-for="number in typeObject.numberOfExecIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('delete-connection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
-          <node-input v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('delete-connection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
-          <audio-param-input v-for="param in typeObject.audioParams" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('delete-connection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
+          <exec-in-pin v-for="number in typeObject.numberOfExecIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('deleteConnection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
+          <node-input v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('deleteConnection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
+          <audio-param-input v-for="param in typeObject.audioParams" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('deleteConnection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
         </div>
         <div class="flex flex-col items-end gap-2 pl-4">
           <exec-out-pin v-for="number in typeObject.numberOfExecOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
@@ -62,167 +219,3 @@
     </div>
   </div>
 </template>
-
-<script>
-  import NodeInput from './NodeInput.vue';
-  import NodeOutput from './NodeOutput.vue';
-  import AudioParamInput from './AudioParamInput.vue';
-  import AudioParamOutput from './AudioParamOutput.vue';
-  import ExecInPin from './ExecInPin.vue';
-  import ExecOutPin from './ExecOutPin.vue';
-  import IconButton from './IconButton.vue';
-  import FormInput from './FormInput.vue';
-  import InputLabel from './InputLabel.vue';
-  import MessageModal from './MessageModal.vue';
-  import { ArrowDownIcon, ArrowsPointingOutIcon, InformationCircleIcon, MusicalNoteIcon, XMarkIcon } from '@heroicons/vue/24/solid';
-
-  export default {
-    components: {
-      NodeInput,
-      NodeOutput,
-      AudioParamInput,
-      AudioParamOutput,
-      ExecInPin,
-      ExecOutPin,
-      IconButton,
-      ArrowDownIcon,
-      ArrowsPointingOutIcon,
-      InformationCircleIcon,
-      MusicalNoteIcon,
-      XMarkIcon,
-      FormInput,
-      InputLabel,
-      MessageModal,
-    },
-
-    emits: ['mobile-connection', 'start-connection', 'hook-connection', 'abort-connection', 'delete-connection', 'delete-node', 'play-node', 'play-up-to-node', 'maximized', 'change-beats'],
-
-    props: {
-      node: {
-        default: {
-          id: null,
-          type: null,
-          beats: null,
-          outputs: [],
-          inputs: [],
-          audioParamInputs: [],
-          audioParamOutputs: [],
-          execIn: [],
-          execOut: [],
-        },
-      },
-    },
-
-    data() {
-      return {
-        maximized: false,
-        recentlyTransitioned: false,
-        extraClasses: '',
-        dragging: null,
-        noteShown: false,
-        noteParent: null,
-        width: 0,
-        height: 0,
-      };
-    },
-
-    computed: {
-      typeObject() {
-        return this.$store.getters.typeOf(this.node);
-      },
-      categoryObject() {
-        return this.$store.getters.categoryOf(this.typeObject);
-      },
-      maximizedClasses() {
-        return this.maximized ? 'cursor-auto rounded-none !left-0 !top-0 min-h-0 min-w-0' + this.extraClasses : 'min-h-max min-w-max w-auto h-auto';
-      },
-      transitionStyles() {
-        return this.recentlyTransitioned ? 'width: ' + this.width + 'px; height: ' + this.height + 'px; transition: left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease;' : 'transition: none;';
-      },
-    },
-
-    watch: {
-      maximized(value) {
-        if (value) {
-          this.width = this.$refs.container.offsetWidth;
-          this.height = this.$refs.container.offsetHeight;
-        }
-        this.recentlyTransitioned = true;
-        setTimeout(() => this.recentlyTransitioned = false, 500);
-        if (value) {
-          setTimeout(() => this.extraClasses = ' !h-full !w-full', 10);
-          this.$emit('maximized', this.node.id);
-        } else {
-          this.extraClasses = '';
-          this.$emit('maximized', null);
-        }
-      },
-    },
-
-    methods: {
-      abort() {
-        this.dragging = null;
-      },
-      startConnectionDrag(event, type, param, color) {
-        this.dragging = { type, param };
-        const position = {
-          x: 16,
-          y: 16,
-        };
-        let current = event.target;
-        while (current != this.$refs.container) {
-          if (!(current instanceof HTMLElement)) {
-            current = current.parentNode;
-            continue;
-          }
-          position.x += current.offsetLeft;
-          position.y += current.offsetTop;
-          current = current.offsetParent;
-        }
-        this.$emit('start-connection', event, this.node.id, type, param, position, color);
-      },
-      endConnectionDrag(event, type, input) {
-        this.abort();
-        if (this.isHooked(type, input)) {
-          this.$emit('abort-connection');
-          return;
-        }
-        const position = {
-          x: 16,
-          y: 16,
-        };
-        let current = event.target;
-        while (current != this.$refs.container) {
-          if (!(current instanceof HTMLElement)) {
-            current = current.parentNode;
-            continue;
-          }
-          position.x += current.offsetLeft;
-          position.y += current.offsetTop;
-          current = current.offsetParent;
-        }
-        this.$emit('hook-connection', this.node.id, type, input, position);
-      },
-      endConnectionMobile() {
-        this.$emit('mobile-connection');
-      },
-      isHooked(type, param) {
-        return (this.dragging?.type == type && this.dragging?.param == param)
-          || this.node[type].some(connection => (connection.input || connection.output) == param);
-      },
-      playNode() {
-        this.$emit('play-node', this.node.id);
-      },
-      playUpToNode() {
-        this.$emit('play-up-to-node', this.node.id);
-      },
-      changeBeats(beats) {
-        this.$emit('change-beats', this.node.id, beats);
-      },
-      showNote(event) {
-        this.noteParent = event.target;
-        this.noteShown = true;
-      },
-    },
-  };
-</script>

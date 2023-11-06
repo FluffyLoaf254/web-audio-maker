@@ -1,17 +1,195 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import InputLabel from './InputLabel.vue';
+import ToggleInput from './ToggleInput.vue';
+import FormInput from './FormInput.vue';
+import { evaluate } from 'mathjs';
+import { isSimpleDataItem, isComplexDataItem, type SimpleDataItem, type DataItem, type Beat } from '../types';
+
+interface Props {
+  default?: SimpleDataItem
+  modelValue: DataItem
+  title: string
+  disabled?: boolean
+  min?: number
+  beats?: number | null
+  startDefault?: number
+  algorithmDefault?: string
+  valuesDefault?: number
+}
+
+type Emits = {
+  'update:modelValue': [value: DataItem]
+};
+
+const props = withDefaults(defineProps<Props>(), {
+  default: 0,
+  disabled: false,
+  min: 0,
+  beats: 60,
+  startDefault: 0,
+  algorithmDefault: 'x + n',
+  valuesDefault:  12,
+});
+
+const emit = defineEmits<Emits>();
+
+const start = ref(0)
+const algorithm = ref('x + n')
+const values = ref(12)
+
+const viewBox = computed(() => {
+  return '0 0 ' + props.beats * 2 + ' ' + values.value * 2;
+});
+
+onMounted(() => {
+  setToDefaults();
+});
+
+watch(start, () => {
+  updateProperties();
+});
+watch(algorithm, () => {
+  updateProperties();
+});
+watch(values, () => {
+  updateProperties();
+});
+
+const recalculateValues = () => {
+  let object = newObject([]);
+  let item = props.modelValue;
+  if (isComplexDataItem(item)) {
+    object.array = [...item.array].map(value => {
+      value.value = generateValue(value.index);
+
+      return value;
+    });
+  }
+
+  updateValue(object);
+};
+
+const convertPixelsToRem = (pixels: number) => {
+  return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
+};
+
+const toggleNote = (event) => {
+  const beat = Math.round(convertPixelsToRem(event.offsetX / 2) + 0.5);
+  const index = Math.round(values.value - (convertPixelsToRem(event.offsetY / 2) + 0.5));
+  const value = generateValue(index);
+  if (!hasValue({ index, beat })) {
+    if (hasValue({ beat })) {
+      removeValue({ beat });
+    }
+    nextTick(() => addValue({ value, index, beat }));
+  } else {
+    removeValue({ beat });
+  }
+};
+
+const addValue = (value) => {
+  let object = newObject([]);
+  let item = props.modelValue;
+  if (isComplexDataItem(item)) {
+    object.array = [...item.array];
+  }
+  object.array.push(value);
+  updateValue(object);
+};
+
+const removeValue = (value) => {
+  let item = props.modelValue;
+  if (!isComplexDataItem(item)) {
+    return false;
+  }
+  let object = newObject([...item.array]);
+  object.array = object.array.filter(note => {
+    for (let property in value) {
+      if (note[property] != value[property]) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+  updateValue(object);
+};
+
+const hasValue = (value) => {
+  let item = props.modelValue;
+  if (!isComplexDataItem(item)) {
+    return false;
+  }
+  return item.array.some(note => {
+    for (let property in value) {
+      if (note[property] != value[property]) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+};
+
+const updateValue = (value) => {
+  emit('update:modelValue', value);
+};
+
+const resetValue = (checked: boolean) => {
+  setToDefaults();
+  updateValue(checked ? props.default : newObject([]));
+};
+
+const setToDefaults = () => {
+  let item = props.modelValue;
+  if (isComplexDataItem(item)) {
+    start.value = item.start;
+    algorithm.value = item.algorithm;
+    values.value = item.values;
+  } else {
+    start.value = props.startDefault;
+    algorithm.value = props.algorithmDefault;
+    values.value = props.valuesDefault;
+  }
+};
+
+const generateValue = (index: number) => {
+  try {
+    return evaluate(algorithm.value, { x: start.value, n: index - 1 });
+  } catch (error) {
+    return 0;
+  }
+};
+
+const updateProperties = () => {
+  nextTick(() => {
+    let item = props.modelValue;
+    if (isComplexDataItem(item)) {
+      updateValue(newObject([...item.array]))
+    }
+  });
+};
+
+const newObject = (array: Beat[]) => {
+  return {
+    start: start.value,
+    algorithm: algorithm.value,
+    values: values.value,
+    array: array,
+  };
+};
+</script>
+
 <template>
   <div>
     <div class="flex flex-col gap-4" v-if="!disabled">
       <div class="flex gap-4 items-center">
         <h3>{{ title }}</h3>
         <input-label value="Static" :for="'static-toggle-' + title" />
-        <toggle-input :name="'static-toggle-' + title" :id="'static-toggle-' + title" :checked="!modelValue.array || !Array.isArray(modelValue.array)" @update:checked="resetValue" />
+        <toggle-input :name="'static-toggle-' + title" :id="'static-toggle-' + title" :checked="isSimpleDataItem(modelValue)" @update:checked="resetValue" />
       </div>
-      <div v-if="!modelValue.array || !Array.isArray(modelValue.array)">
-        <input-label value="Value">
-          <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :modelValue="modelValue" @update:modelValue="updateValue" />
-        </input-label>
-      </div>
-      <div v-else class="flex flex-col gap-4">
+      <div v-if="isComplexDataItem(modelValue)" class="flex flex-col gap-4">
         <div class="relative overflow-x-scroll overscroll-y-auto bg-white w-full" ref="graph">
           <div class="relative bg-repeat cursor-pointer" :style="{ height: values * 2 + 'rem', width: beats * 2 + 'rem' }" @click="toggleNote($event)" style="background-size: 2rem 2rem; background-image: radial-gradient(circle at center, transparent 0, transparent 0.6rem, rgba(0, 0, 0, 0.2) 0.6rem, rgba(0, 0, 0, 0.2) 0.8rem, transparent 0.8rem);">
             <svg :viewBox="viewBox" :width="beats * 32" :height="values * 32">
@@ -33,6 +211,11 @@
           <form-input :name="'dynamic-algorithm-' + title" class="w-full" type="text" pattern="^[xn\-\+\/\*\^0-9\.\(\)\s]*$" v-model="algorithm" @change="recalculateValues()" />
         </input-label>
       </div>
+      <div v-else>
+        <input-label value="Value">
+          <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :modelValue="modelValue" @update:modelValue="updateValue" />
+        </input-label>
+      </div>
     </div>
     <div class="flex flex-col gap-4" v-else>
       <h3>{{ title }}</h3>
@@ -40,185 +223,3 @@
     </div>
   </div>
 </template>
-
-<script>
-  import InputLabel from './InputLabel.vue';
-  import ToggleInput from './ToggleInput.vue';
-  import FormInput from './FormInput.vue';
-  import { evaluate } from 'mathjs';
-
-  export default {
-    components: {
-      InputLabel,
-      ToggleInput,
-      FormInput,
-    },
-
-    props: {
-      default: {
-        default: 0,
-      },
-      modelValue: {
-        default: null,
-      },
-      title: {
-        default: 'Unspecified',
-      },
-      disabled: {
-        default: false,
-      },
-      min: {
-        default: 0,
-      },
-      beats: {
-        default: 60,
-      },
-      startDefault: {
-        default: 0,
-      },
-      algorithmDefault: {
-        default: 'x + n',
-      },
-      valuesDefault: {
-        default: 12,
-      },
-    },
-
-    emits: ['update:modelValue'],
-
-    data() {
-      return {
-        transitions: [
-          'none',
-          'linear',
-          'exponential',
-          'decay',
-          'smooth',
-        ],
-        start: 0,
-        algorithm: 'x + n',
-        values: 12,
-      };
-    },
-
-    computed: {
-      viewBox() {
-        return '0 0 ' + this.beats * 2 + ' ' + this.values * 2;
-      },
-    },
-
-    mounted() {
-      this.setToDefaults();
-    },
-
-    watch: {
-      start(value) {
-        this.updateProperties();
-      },
-      algorithm(value) {
-        this.updateProperties();
-      },
-      values(value) {
-        this.updateProperties();
-      },
-    },
-
-    methods: {
-      recalculateValues() {
-        let object = this.newObject([]);
-        if (Boolean(this.modelValue.array) && Array.isArray(this.modelValue.array)) {
-          object.array = [...this.modelValue.array].map(value => {
-            value.value = this.generateValue(value.index);
-
-            return value;
-          });
-        }
-
-        this.$emit('update:modelValue', object);
-      },
-      convertPixelsToRem(pixels) {
-        return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
-      },
-      toggleNote(event) {
-        const beat = Math.round(this.convertPixelsToRem(event.offsetX / 2) + 0.5);
-        const index = Math.round(this.values - (this.convertPixelsToRem(event.offsetY / 2) + 0.5));
-        const value = this.generateValue(index);
-        if (!this.hasValue({ index, beat })) {
-          if (this.hasValue({ beat })) {
-            this.removeValue({ beat });
-          }
-          this.$nextTick(() => this.addValue({ value, index, beat }));
-        } else {
-          this.removeValue({ beat });
-        }
-      },
-      addValue(value) {
-        let object = this.newObject([]);
-        if (this.modelValue.array && Array.isArray(this.modelValue.array)) {
-          object.array = [...this.modelValue.array];
-        }
-        object.array.push(value);
-        this.$emit('update:modelValue', object);
-      },
-      removeValue(value) {
-        let object = this.newObject([...this.modelValue.array]);
-        object.array = object.array.filter(note => {
-          for (let property in value) {
-            if (note[property] != value[property]) {
-              return true;
-            }
-          }
-
-          return false;
-        });
-        this.$emit('update:modelValue', object);
-      },
-      hasValue(value) {
-        if (!this.modelValue.array || !Array.isArray(this.modelValue.array)) {
-          return false;
-        }
-        return this.modelValue.array.some(note => {
-          for (let property in value) {
-            if (note[property] != value[property]) {
-              return false;
-            }
-          }
-
-          return true;
-        });
-      },
-      updateValue(value) {
-        this.$emit('update:modelValue', value);
-      },
-      resetValue(checked) {
-        this.setToDefaults();
-        this.$emit('update:modelValue', checked ? this.default : this.newObject([]));
-      },
-      setToDefaults() {
-        this.start = this.modelValue.start ?? this.startDefault;
-        this.algorithm = this.modelValue.algorithm ?? this.algorithmDefault;
-        this.values = this.modelValue.values ?? this.valuesDefault;
-      },
-      generateValue(index) {
-        try {
-          return evaluate(this.algorithm, { x: this.start, n: index - 1 });
-        } catch (error) {
-          return 0;
-        }
-      },
-      updateProperties() {
-        if (this.modelValue.array && Array.isArray(this.modelValue.array)) {
-          this.$nextTick(() => this.$emit('update:modelValue', this.newObject([...this.modelValue.array])));
-        }
-      },
-      newObject(array) {
-        return {
-          start: this.start,
-          algorithm: this.algorithm,
-          values: this.values,
-          array: array,
-        };
-      }
-    },
-  };
-</script>

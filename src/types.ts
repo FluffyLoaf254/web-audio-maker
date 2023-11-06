@@ -37,7 +37,7 @@ export interface Output {
 };
 
 export interface NodeData {
-  [index: string]: SimpleDataItem | ComplexDataItem
+  [index: string]: DataItem
 };
 
 export type SimpleDataItem = string | number;
@@ -48,6 +48,8 @@ export interface ComplexDataItem {
   algorithm: string
   array: Beat[]
 };
+
+export type DataItem = SimpleDataItem | ComplexDataItem;
 
 export interface Beat {
   value: number
@@ -113,12 +115,12 @@ export interface NodeTypeCategory {
   playable: boolean
 };
 
-export function isComplexDataItem(dataItem: SimpleDataItem | ComplexDataItem): dataItem is ComplexDataItem
+export function isComplexDataItem(dataItem: DataItem): dataItem is ComplexDataItem
 {
   return typeof dataItem == 'object' ? Array.isArray(dataItem.array) : false;
 }
 
-export function isSimpleDataItem(dataItem: SimpleDataItem | ComplexDataItem): dataItem is SimpleDataItem
+export function isSimpleDataItem(dataItem: DataItem): dataItem is SimpleDataItem
 {
   return typeof dataItem != 'object';
 }
