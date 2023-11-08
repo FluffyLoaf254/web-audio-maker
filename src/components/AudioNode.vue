@@ -164,13 +164,13 @@ defineExpose({
       <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
         <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
-          <icon-button @mousedown.stop @touchstart.stop @click.capture="showNote($event)">
+          <icon-button @mousedown.stop @touchstart.stop @click.capture="showNote($event)" label="Node Information">
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
-          <icon-button v-if="typeObject.component" @mousedown.stop @touchstart.stop @click="maximized = true">
+          <icon-button v-if="typeObject.component" @mousedown.stop @touchstart.stop @click="maximized = true" label="Maximize Node">
             <arrows-pointing-out-icon class="h-5 w-5" />
           </icon-button>
-          <icon-button @mousedown.stop @touchstart.stop @click="$emit('deleteNode', node.id)">
+          <icon-button @mousedown.stop @touchstart.stop @click="$emit('deleteNode', node.id)" label="Delete Node">
             <x-mark-icon class="h-5 w-5" />
           </icon-button>
         </div>
@@ -193,7 +193,7 @@ defineExpose({
           <input-label value="Beats" :for="'beats-' + node.id" />
         </div>
         <div v-else></div>
-        <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="typeObject.category != 'logic'">
+        <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="typeObject.category != 'logic'" label="Play Up To Node">
           <musical-note-icon class="h-5 w-5" />
         </icon-button>
       </div>
@@ -202,10 +202,10 @@ defineExpose({
       <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
         <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
-          <icon-button @mousedown.stop @touchstart.stop @click.capture="showNote($event)">
+          <icon-button @mousedown.stop @touchstart.stop @click.capture="showNote($event)" label="Node Information">
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
-          <icon-button @mousedown.stop @touchstart.stop @click="maximized = false">
+          <icon-button @mousedown.stop @touchstart.stop @click="maximized = false" label="Minimize Node">
             <arrow-down-icon class="h-5 w-5" />
           </icon-button>
         </div>
@@ -214,7 +214,7 @@ defineExpose({
         <component :is="typeObject.component" v-bind="{ id: node.id }" ref="component"></component>
       </div>
       <div class="bg-white flex w-full justify-end items-center gap-4 p-2 h-10">
-        <icon-button v-if="categoryObject.playable" @mousedown.stop @touchstart.stop @click="playNode">
+        <icon-button v-if="categoryObject.playable" @mousedown.stop @touchstart.stop @click="playNode" label="Play Node">
           <musical-note-icon class="h-5 w-5" />
         </icon-button>
       </div>

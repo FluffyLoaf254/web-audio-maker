@@ -40,9 +40,9 @@ const showNote = (event, note) => {
       <form-input name="node-types-search" v-model="input" class="w-full" placeholder="Search" />
     </div>
     <div class="w-64 overflow-y-auto flex flex-col divide-y divide-gray-300 max-h-full">
-      <button type="button" v-for="nodeType in foundTypes" :key="nodeType.type" :disabled="numberOfType(nodeType.type) >= nodeType.max" @click="$emit('add', nodeType)" :style="{ 'border-left-color': getCategoryOf(nodeType).color }" class="cursor-pointer text-left p-3 bg-white disabled:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-500 hover:bg-gray-100 active:bg-gray-200 focus:outline-none focus:ring focus:ring-blue-500 border-l-8 flex justify-between items-center">
+      <button type="button" v-for="nodeType in foundTypes" :key="nodeType.type" :disabled="numberOfType(nodeType.type) >= nodeType.max" @click="$emit('add', nodeType)" :style="{ 'border-left-color': getCategoryOf(nodeType).color }" class="cursor-pointer text-left p-3 bg-white disabled:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-500 hover:bg-gray-100 active:bg-gray-200 border-l-8 flex justify-between items-center focus:outline-none focus:ring focus:ring-inset focus:ring-blue-500">
         {{ nodeType.name }}
-        <icon-button @mousedown.stop @touchstart.stop @click.stop="showNote($event, nodeType.note)">
+        <icon-button @mousedown.stop @touchstart.stop @click.stop="showNote($event, nodeType.note)" label="Node Type Information">
           <information-circle-icon class="h-5 w-5" />
         </icon-button>
       </button>

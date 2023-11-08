@@ -469,7 +469,7 @@ const showTutorial = () => {
           </div>
           <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop data-tutorial="Use this button to open the menu for adding new audio graph nodes. This is the place to start." />
         </div>
-        <add-menu class="absolute h-full -right-64 md:relative md:right-0 transition-all" :class="{ 'md:w-64': addMenuOpen, 'md:w-0': !addMenuOpen }" @add="addNode" />
+        <add-menu class="absolute h-full -right-64 md:relative md:right-0 transition-all" :class="{ 'md:w-64': addMenuOpen, 'md:w-0': !addMenuOpen, 'invisible': !addMenuOpen }" @add="addNode" />
       </div>
     </div>
     <footer-bar @search="search" @play="play" v-model:looping="looping" />
