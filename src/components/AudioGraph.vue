@@ -450,7 +450,7 @@ const showTutorial = () => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 h-screen divide-y" style="grid-template-rows: min-content minmax(0, 1fr) min-content;">
+  <div class="grid grid-cols-1 h-full divide-y" style="grid-template-rows: min-content minmax(0, 1fr) min-content;">
     <header-bar v-model:bpm.number="bpm" @tutorial="showTutorial">WebAudioMaker</header-bar>
     <div class="flex w-full h-full overflow-hidden md:overflow-visible relative">
       <div class="flex w-full h-full relative md:ml-0 transition-all md:overflow-hidden" :class="{ '-ml-64': addMenuOpen }">
