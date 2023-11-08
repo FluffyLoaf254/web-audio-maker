@@ -264,7 +264,7 @@ const endPan = () => {
   position.value = finalPosition.value;
 };
 
-const convertPixelsToRem = (pixels) => {
+const convertPixelsToRem = (pixels: number): number => {
   return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
 };
 

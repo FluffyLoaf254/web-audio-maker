@@ -70,7 +70,7 @@ const recalculateValues = () => {
   updateValue(object);
 };
 
-const convertPixelsToRem = (pixels: number) => {
+const convertPixelsToRem = (pixels: number): number => {
   return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
 };
 

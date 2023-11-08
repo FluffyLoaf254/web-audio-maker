@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useStore } from '../store';
+import { v4 as uuid } from 'uuid';
 import NodeInput from './NodeInput.vue';
 import NodeOutput from './NodeOutput.vue';
 import AudioParamInput from './AudioParamInput.vue';
@@ -42,6 +43,7 @@ const extraClasses = ref('');
 const dragging = ref(null);
 const noteShown = ref(false);
 const noteParent = ref(null);
+const noteKey = ref(uuid());
 const width = ref(0);
 const height = ref(0);
 
@@ -148,6 +150,7 @@ const changeBeats = (beats) => {
 const showNote = (event) => {
   noteParent.value = event.target;
   noteShown.value = true;
+  noteKey.value = uuid();
 };
 
 defineExpose({
@@ -161,10 +164,9 @@ defineExpose({
       <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
         <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
-          <icon-button @mousedown.stop @touchstart.stop @click="showNote($event)">
+          <icon-button @mousedown.stop @touchstart.stop @click.capture="showNote($event)">
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
-          <message-modal @close="noteShown = false;" :show="Boolean(noteShown)" :parent="noteParent">{{ typeObject.note }}</message-modal>
           <icon-button v-if="typeObject.component" @mousedown.stop @touchstart.stop @click="maximized = true">
             <arrows-pointing-out-icon class="h-5 w-5" />
           </icon-button>
@@ -200,7 +202,7 @@ defineExpose({
       <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
         <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
-          <icon-button @mousedown.stop @touchstart.stop>
+          <icon-button @mousedown.stop @touchstart.stop @click.capture="showNote($event)">
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
           <icon-button @mousedown.stop @touchstart.stop @click="maximized = false">
@@ -217,5 +219,6 @@ defineExpose({
         </icon-button>
       </div>
     </div>
+    <message-modal :key="noteKey" @close="noteShown = false;" :show="Boolean(noteShown)" :parent="noteParent">{{ typeObject.note }}</message-modal>
   </div>
 </template>
