@@ -59,6 +59,7 @@ export interface Beat {
 
 export interface Node {
   id: string
+  name: string
   position: Position
   ref: string
   order: number

@@ -67,6 +67,7 @@ class WebAudioPlayer {
       }];
       node = {
         id,
+        name: 'Destinatoin',
         ref: 'generated',
         type: 'destination',
         position: {

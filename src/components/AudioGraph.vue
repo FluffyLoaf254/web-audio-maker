@@ -126,13 +126,13 @@ const panPosition = computed(() => {
 const finalPosition = computed({
   get() {
     return {
-      x: Math.min(0, Math.max(-500 + size.value.width, position.value.x + panPosition.value.x)),
-      y: Math.min(0, Math.max(-500 + size.value.height, position.value.y + panPosition.value.y)),
+      x: position.value.x + panPosition.value.x,
+      y: position.value.y + panPosition.value.y,
     };
   },
   set(value) {
-    position.value.x = Math.min(0, Math.max(-500 + size.value.width, value.x + panPosition.value.x));
-    position.value.y = Math.min(0, Math.max(-500 + size.value.height, value.y + panPosition.value.y));
+    position.value.x = value.x + panPosition.value.x;
+    position.value.y = value.y + panPosition.value.y;
   },  
 });
 
@@ -288,10 +288,11 @@ const setMousePosition = (event) => {
   }
 };
 
-const addNode = (node) => {
+const addNode = (type) => {
   const id = uuid();
-  const added = {
+  const node = {
     id,
+    name: type.name,
     position: {
       x: (size.value.width / 2) - 9 - finalPosition.value.x,
       y: (size.value.height / 2) - 9 - finalPosition.value.y,
@@ -305,10 +306,10 @@ const addNode = (node) => {
     execIn: [],
     execOut: [],
     data: {},
-    beats: node.beats,
-    type: node.type,
+    beats: type.beats,
+    type: type.type,
   };
-  store.commit('addNode', added)
+  store.commit('addNode', node)
 };
 
 const startConnection = (event, nodeId, outputType, output, position, color) => {
@@ -459,7 +460,7 @@ const showTutorial = () => {
             <load-button @click="selectLoadJsonFile" @mousemove.stop @touchmove.stop data-tutorial="Use this button to load an audio graph from a JSON file." />
             <input ref="loader" @change="loadJson($event)" type="file" class="hidden">
           </div>
-          <div class="bg-repeat min-w-full min-h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="width: 500rem; height: 500rem; background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'margin-left': finalPosition.x + 'rem', 'margin-top': finalPosition.y + 'rem' }">
+          <div class="bg-repeat w-full h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'background-position': finalPosition.x + 'rem ' + finalPosition.y + 'rem' }">
             <transition-group name="pop">
               <audio-node :node="node" @mobile-connection="hookConnectionMobile" @change-beats="changeBeats" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="el => nodeRefs[node.ref] = el" :key="node.id" :style="{ 'z-index': (maximized == node.id) ? 200 : Math.floor((node.order / Math.max(1.0, nodes.length)) * 100.0), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
             </transition-group>

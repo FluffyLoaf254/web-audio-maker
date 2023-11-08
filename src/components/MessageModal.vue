@@ -41,7 +41,7 @@ const close = () => {
 <template>
   <teleport to="body">
     <div v-if="show" class="z-[400] fixed w-screen h-screen top-0 left-0" @click.stop="close" @touchstart.stop @mousedown.stop>
-      <div class="absolute bg-white w-52 p-4 rounded shadow-lg" :style="positionStyles">
+      <div class="absolute bg-white w-52 p-4 rounded shadow-xl" :style="positionStyles">
         <slot></slot>
       </div>
     </div>
