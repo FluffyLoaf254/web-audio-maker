@@ -51,10 +51,13 @@ export interface ComplexDataItem {
 
 export type DataItem = SimpleDataItem | ComplexDataItem;
 
+export type BeatTransition = 'constant' | 'linear' | 'exponential';
+
 export interface Beat {
   value: number
   index: number
   beat: number
+  transition: BeatTransition
 };
 
 export interface Node {

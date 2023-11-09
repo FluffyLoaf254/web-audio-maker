@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid';
-import { type StateJson, type Node, NodeTrackingInformation, NodeData, isSimpleDataItem, isComplexDataItem } from '../../types';
+import { type StateJson, type Node, NodeTrackingInformation, NodeData, isComplexDataItem } from '../../types';
 
 class WebAudioPlayer {
   original: StateJson;
@@ -238,9 +238,18 @@ class WebAudioPlayer {
                 const offset = this.beat + beat - node.start;
                 const value = item.array.find(value => value.beat - 1 == offset);
                 if (!value) {
-                  node.object[param].setValueAtTime(0, (((node.start + offset) / this.bpm) * 60) - context.currentTime);
-                } else {
-                  node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
+                  continue;
+                }
+                switch (value.transition) {
+                  case 'constant':
+                    node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
+                    break;
+                  case 'linear':
+                    node.object[param].linearRampToValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
+                    break;
+                  case 'exponential':
+                    node.object[param].exponentialRampToValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
+                    break;
                 }
               } else {
                 if (Boolean(node.object[param].value)) {
@@ -323,10 +332,11 @@ class WebAudioPlayer {
   createNode(context: AudioContext, type: string, data: NodeData) {
     const options = {};
     for (let param in data) {
-      if (isSimpleDataItem(data[param])) {
-        options[param] = data[param];
+      let item = data[param];
+      if (isComplexDataItem(item)) {
+        options[param] = item.start;
       } else {
-        options[param] = 0;
+        options[param] = item;
       }
     }
     switch (type) {

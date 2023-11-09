@@ -128,7 +128,7 @@ const newObject = (array: Beat[]) => {
         <audio-param-graph :model-value="modelValue.array" @update:model-value="(beats) => updateValue(newObject(beats))" :start="start" :values="values" :algorithm="algorithm" :beats="beats" />
         <div class="flex gap-4">
           <input-label value="Start">
-            <form-input :name="'dynamic-start-' + title" type="number" :min="min" v-model="start" />
+            <form-input :name="'dynamic-start-' + title" type="number" :min="min" v-model="start" @change="recalculateValues()" />
           </input-label>
           <input-label value="Number">
             <form-input :name="'dynamic-number-' + title" type="number" min="1" max="24" step="1" pattern="^[0-9]+$" v-model="values" />
@@ -140,7 +140,7 @@ const newObject = (array: Beat[]) => {
       </div>
       <div v-else>
         <input-label value="Value">
-          <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :mode-value="modelValue" @update:mode-value="updateValue" />
+          <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :model-value="modelValue" @update:mode-value="updateValue" />
         </input-label>
       </div>
     </div>
