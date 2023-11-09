@@ -306,6 +306,7 @@ const addNode = (type) => {
     execIn: [],
     execOut: [],
     data: {},
+    meta: {},
     beats: type.beats,
     type: type.type,
   };

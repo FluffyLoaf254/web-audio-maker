@@ -89,6 +89,7 @@ class WebAudioPlayer {
         execOut: [],
         beats: 0,
         data: {},
+        meta: {},
         order: 0,
       }
     }
@@ -141,7 +142,7 @@ class WebAudioPlayer {
       start: this.calculateStart(node),
       playing: false,
       object: this.createNode(audioContext, node.type, node.data),
-      beats: Number(node.beats != null ? node.beats : this.calculateBeats(node)),
+      beats: Number(node.beats != null ? node.beats : this.calculateBeats(nodes, node)),
       scheduling: false,
     }));
 
@@ -228,7 +229,8 @@ class WebAudioPlayer {
         let data = node.data;
         // handle audio param nodes (forwards data properties)
         for (let output of node.audioParamInputs) {
-          data = Object.assign(data, { [output.input]: this.playingNodes.find(item => item.id == output.node).data.output });
+          let outputNode = this.playingNodes.find(item => item.id == output.node);
+          data = Object.assign(data, { [output.input]: outputNode.data[outputNode.audioParamOutputs.find(param => param.output == output.param).param] });
         }
         while (beat < this.scheduleBeats && (this.beat + beat - node.start < node.beats)) {
           if (beat + this.beat >= node.start) {
@@ -245,10 +247,10 @@ class WebAudioPlayer {
                     node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
                     break;
                   case 'linear':
-                    node.object[param].linearRampToValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
+                    node.object[param].linearRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
                     break;
                   case 'exponential':
-                    node.object[param].exponentialRampToValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
+                    node.object[param].exponentialRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
                     break;
                 }
               } else {
@@ -271,10 +273,10 @@ class WebAudioPlayer {
     return this.getChainedExecNodes(node).filter(item => item.id != node.id).reduce((carry, node) => carry + Number(node.beats), 0);
   }
 
-  calculateBeats(node: Node) {
+  calculateBeats(nodes: Node[], node: Node) {
     let current = [node];
     while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
-      current = this.playingNodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
+      current = nodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
     }
 
     return current.reduce((carry, node) => Math.max(carry, (Number(node.beats ?? 0))), 0);
@@ -320,7 +322,7 @@ class WebAudioPlayer {
     }
     for (let child of node.audioParamInputs) {
       const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      nodes = nodes.concat(this.getChainedNodes(childNode));
+      nodes = nodes.concat(this.getChainedNodes(childNode, false));
     }
     for (let child of node.execIn) {
       const childNode = this.json.nodes.find(childNode => childNode.id == child.node);

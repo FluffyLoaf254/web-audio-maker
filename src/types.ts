@@ -40,6 +40,11 @@ export interface NodeData {
   [index: string]: DataItem
 };
 
+export interface Note {
+  beat: number
+  index: number
+}
+
 export type SimpleDataItem = string | number;
 
 export interface ComplexDataItem {
@@ -73,6 +78,7 @@ export interface Node {
   execOut: Output[]
   execIn: Input[]
   data: NodeData
+  meta: any
   beats: number | null
   type: string
 };
@@ -117,6 +123,7 @@ export interface NodeTypeCategory {
   type: string
   color: string
   playable: boolean
+  playableUpTo: boolean
 };
 
 export function isComplexDataItem(dataItem: DataItem): dataItem is ComplexDataItem

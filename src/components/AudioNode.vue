@@ -193,7 +193,7 @@ defineExpose({
           <input-label value="Beats" :for="'beats-' + node.id" />
         </div>
         <div v-else></div>
-        <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="typeObject.category != 'logic'" label="Play Up To Node">
+        <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="categoryObject.playableUpTo" label="Play Up To Node">
           <musical-note-icon class="h-5 w-5" />
         </icon-button>
       </div>

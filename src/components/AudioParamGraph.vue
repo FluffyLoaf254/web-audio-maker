@@ -130,7 +130,7 @@ const updateValue = (value) => {
         <button class="bg-blue-100 w-36 px-4 p-2 text-bold border-2 border-blue-600 text-blue-600" :class="{ '!bg-blue-300': transition == 'exponential' }" @click="transition = 'exponential'">Exponential</button>
       </div>
     </div>
-    <div class="relative overflow-x-scroll overscroll-y-auto bg-white w-full border-4 border-slate-300" ref="graph">
+    <div class="relative overflow-x-scroll overscroll-y-auto bg-white w-full border-4 border-slate-300">
       <div class="relative bg-repeat cursor-pointer" :style="{ height: values * 2 + 'rem', width: beats * 2 + 'rem' }" @click="toggleNote($event)" style="background-size: 2rem 2rem; background-image: linear-gradient(to top, transparent 0, transparent 0.9rem, rgba(0, 0, 0, 0.1) 0.9rem, rgba(0, 0, 0, 0.1) 1rem, transparent 1rem), linear-gradient(to right, transparent 0, transparent 0.9rem, rgba(0, 0, 0, 0.1) 0.9rem, rgba(0, 0, 0, 0.1) 1rem, transparent 1rem), radial-gradient(circle at center, transparent 0, transparent 0.4rem, rgba(0, 0, 0, 0.1) 0.4rem, rgba(0, 0, 0, 0.1) 0.5rem, transparent 0.5rem);">
         <svg :viewBox="viewBox" :width="beats * 32" :height="values * 32">
           <path :d="generatePath(modelValue)" fill="transparent" stroke-width="0.4" stroke="hsl(0, 70%, 80%)" />

@@ -7,6 +7,7 @@ import DelayOptions from './components/DelayOptions.vue';
 import DestinationOptions from './components/DestinationOptions.vue';
 import GainOptions from './components/GainOptions.vue';
 import OscillatorOptions from './components/OscillatorOptions.vue';
+import KeyboardOptions from './components/KeyboardOptions.vue';
 
 export interface State {
   json: StateJson
@@ -35,21 +36,31 @@ export const store = createStore<State>({
         type: 'generator',
         color: 'hsl(120, 70%, 70%)',
         playable: true,
+        playableUpTo: true,
       },
       {
         type: 'modifier',
         color: 'hsl(60, 70%, 70%)',
         playable: false,
+        playableUpTo: true,
       },
       {
         type: 'destination',
         color: 'hsl(240, 3%, 70%)',
         playable: false,
+        playableUpTo: true,
       },
       {
         type: 'logic',
         color: 'hsl(240, 70%, 70%)',
         playable: false,
+        playableUpTo: false,
+      },
+      {
+        type: 'driver',
+        color: 'hsl(0, 70%, 70%)',
+        playable: false,
+        playableUpTo: false,
       },
     ],
     nodeTypes: [
@@ -67,21 +78,6 @@ export const store = createStore<State>({
         numberOfExecOut: 1,
         max: 1,
         beats: null,
-      },
-      {
-        name: 'Audio Param',
-        type: 'param',
-        component: markRaw(AudioParamOptions),
-        category: 'logic',
-        note: 'This node is for driving audio params from one spot.',
-        numberOfInputs: 0,
-        numberOfOutputs: 0,
-        audioParams: [],
-        numberOfAudioParamOutputs: 1,
-        numberOfExecIn: 0,
-        numberOfExecOut: 0,
-        max: 10,
-        beats: 60,
       },
       {
         name: 'Oscillator',
@@ -154,6 +150,36 @@ export const store = createStore<State>({
         numberOfExecOut: 0,
         max: 3,
         beats: null,
+      },
+      {
+        name: 'Keyboard',
+        type: 'keyboard',
+        component: markRaw(KeyboardOptions),
+        category: 'driver',
+        note: 'Drive nodes with an intuitive keyboard control.',
+        numberOfInputs: 0,
+        numberOfOutputs: 0,
+        audioParams: [],
+        numberOfAudioParamOutputs: 2,
+        numberOfExecIn: 0,
+        numberOfExecOut: 0,
+        max: 10,
+        beats: 60,
+      },
+      {
+        name: 'Audio Param',
+        type: 'param',
+        component: markRaw(AudioParamOptions),
+        category: 'driver',
+        note: 'This node is for driving audio params from one spot.',
+        numberOfInputs: 0,
+        numberOfOutputs: 0,
+        audioParams: [],
+        numberOfAudioParamOutputs: 1,
+        numberOfExecIn: 0,
+        numberOfExecOut: 0,
+        max: 10,
+        beats: 60,
       },
       {
         name: 'Mix',
@@ -253,6 +279,12 @@ export const store = createStore<State>({
       const index = state.json.nodes.findIndex(node => node.id == id);
       for (let property in data) {
         state.json.nodes[index].data[property] = data[property];
+      }
+    },
+    updateNodeMeta(state: State, { id, meta }: { id: string, meta: any }) {
+      const index = state.json.nodes.findIndex(node => node.id == id);
+      for (let property in meta) {
+        state.json.nodes[index].meta[property] = meta[property];
       }
     },
     addWire(state: State, wire: Wire) {
