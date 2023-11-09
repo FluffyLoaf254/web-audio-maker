@@ -92,40 +92,44 @@ const values = ref(88);
 watch(meta, (value: any) => {
   let frequency = data.value.frequency as ComplexDataItem;
   frequency.array = value.notes.map(item => ({
-    beat: item.beat * 2 - 1,
+    beat: item.beat,
     index: item.index,
     value: generateValue(frequency.algorithm, frequency.start, item.index),
     transition: 'constant',
   }));
   let gain = data.value.gain as ComplexDataItem;
   let gainArray = [];
-  let maxBeat = 1;
   for (let item of value.notes) {
     gainArray.push({
-      beat: item.beat * 2 - 1,
+      beat: item.beat,
       index: 1,
       value: gain.start,
       transition: value.attack as BeatTransition,
     });
     gainArray.push({
-      beat: item.beat * 2,
+      beat: item.beat + 0.05,
       index: 2,
       value: generateValue(gain.algorithm, gain.start, 2),
       transition: value.attack as BeatTransition,
     });
-    maxBeat = item.beat * 2;
+    gainArray.push({
+      beat: item.beat + 0.95,
+      index: 2,
+      value: generateValue(gain.algorithm, gain.start, 2),
+      transition: value.attack as BeatTransition,
+    });
+    gainArray.push({
+      beat: item.beat + 1,
+      index: 1,
+      value: gain.start,
+      transition: value.attack as BeatTransition,
+    });
   }
-  gainArray.push({
-    beat: maxBeat + 1,
-    index: 1,
-    value: gain.start,
-    transition: value.attack as BeatTransition,
-  });
   gain.array = gainArray;
 }, { deep: true });
 
 const viewBox = computed(() => {
-  return '0 0 ' + node.value.beats + ' ' + values.value * 2;
+  return '0 0 ' + node.value.beats * 2 + ' ' + values.value * 2;
 });
 
 useNodeData(props.id, node, data, meta);
@@ -140,9 +144,10 @@ useNodeData(props.id, node, data, meta);
         <option value="exponential">Exponential</option>
       </select-input>
     </input-label>
-    <div class="relative overflow-x-scroll overflow-y-scroll bg-white w-full border-4 border-slate-300">
-      <div class="relative bg-repeat cursor-pointer" :style="{ height: values * 2 + 'rem', width: node.beats + 'rem' }" @click="toggleNote($event)" style="background-size: 2rem 2rem; background-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0, rgba(0, 0, 0, 0.1) 0.5rem, transparent 0.5rem);">
-        <svg :viewBox="viewBox" :width="(node.beats / 2) * 32" :height="values * 32">
+    <div class="relative overflow-x-scroll overflow-y-scroll flex bg-white w-full border-4 border-slate-300">
+      <div class="min-w-[6rem] border-r-4 border-slate-500 bg-repeat" :style="{ height: values * 2 + 'rem' }" style="background-size: 9rem 24rem; background-image: linear-gradient(to top, white 0, white 1.9rem, rgba(0, 0, 0, 0.4) 1.9rem, rgba(0, 0, 0, 0.4) 2rem, rgba(0, 0, 0, 0.8) 2rem, rgba(0, 0, 0, 0.8) 3.9rem, rgba(0, 0, 0, 0.4) 3.9rem, rgba(0, 0, 0, 0.4) 4rem, white 4rem, white 5.9rem, rgba(0, 0, 0, 0.4) 5.9rem, rgba(0, 0, 0, 0.4) 6rem, white 6rem, white 7.9rem, rgba(0, 0, 0, 0.4) 7.9rem, rgba(0, 0, 0, 0.4) 8rem, rgba(0, 0, 0, 0.8) 8rem, rgba(0, 0, 0, 0.8) 9.9rem, rgba(0, 0, 0, 0.4) 9.9rem, rgba(0, 0, 0, 0.4) 10rem, white 10rem, white 11.9rem, rgba(0, 0, 0, 0.4) 11.9rem, rgba(0, 0, 0, 0.4) 12rem,  rgba(0, 0, 0, 0.8) 12rem, rgba(0, 0, 0, 0.8) 13.9rem, rgba(0, 0, 0, 0.4) 13.9rem, rgba(0, 0, 0, 0.4) 14rem, white 14rem, white 15.9rem, rgba(0, 0, 0, 0.4) 15.9rem, rgba(0, 0, 0, 0.4) 16rem, white 16rem, white 17.9rem, rgba(0, 0, 0, 0.4) 17.9rem, rgba(0, 0, 0, 0.4) 18rem, rgba(0, 0, 0, 0.8) 18rem, rgba(0, 0, 0, 0.8) 19.9rem, rgba(0, 0, 0, 0.4) 19.9rem, rgba(0, 0, 0, 0.4) 20rem, white 20rem, white 21.9rem, rgba(0, 0, 0, 0.4) 21.9rem, rgba(0, 0, 0, 0.4) 22rem,  rgba(0, 0, 0, 0.8) 22rem, rgba(0, 0, 0, 0.8) 23.9rem, rgba(0, 0, 0, 0.4) 23.9rem)"></div>
+      <div class="cursor-pointer" :style="{ height: values * 2 + 'rem', width: node.beats * 2 + 'rem' }" @click="toggleNote($event)" style="background-repeat: repeat, repeat; background-size: 100% 4rem, 2rem 2rem; background-image: linear-gradient(to top, transparent 0, transparent 2rem, rgba(0, 0, 0, 0.05) 2rem, rgba(0, 0, 0, 0.05) 4rem), radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0, rgba(0, 0, 0, 0.1) 0.5rem, transparent 0.5rem);">
+        <svg :viewBox="viewBox" :width="node.beats * 32" :height="values * 32">
           <transition-group name="fade">
             <circle v-for="note in meta.notes" :key="JSON.stringify(note)" :cx="(Number(note.beat) - 0.5) * 2" :cy="(values - (note.index + 0.5)) * 2" r="0.5" fill="transparent" stroke-width="0.4" stroke="hsl(200, 70%, 70%)" />
           </transition-group>

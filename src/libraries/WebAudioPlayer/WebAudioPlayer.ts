@@ -238,20 +238,22 @@ class WebAudioPlayer {
               let item = data[param];
               if (isComplexDataItem(item)) {
                 const offset = this.beat + beat - node.start;
-                const value = item.array.find(value => value.beat - 1 == offset);
-                if (!value) {
+                const values = item.array.filter(value => Math.floor(value.beat - 1) <= offset);
+                if (!values.length) {
                   continue;
                 }
-                switch (value.transition) {
-                  case 'constant':
-                    node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
-                    break;
-                  case 'linear':
-                    node.object[param].linearRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
-                    break;
-                  case 'exponential':
-                    node.object[param].exponentialRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, ((node.start + offset) / this.bpm) * 60 - context.currentTime));
-                    break;
+                for (let value of values) {
+                  switch (value.transition) {
+                    case 'constant':
+                      node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + value.beat - 1) / this.bpm) * 60 - context.currentTime));
+                      break;
+                    case 'linear':
+                      node.object[param].linearRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, ((node.start + value.beat - 1) / this.bpm) * 60 - context.currentTime));
+                      break;
+                    case 'exponential':
+                      node.object[param].exponentialRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, ((node.start + value.beat - 1) / this.bpm) * 60 - context.currentTime));
+                      break;
+                  }
                 }
               } else {
                 if (Boolean(node.object[param].value)) {
