@@ -2,10 +2,10 @@
 import { ref, computed } from 'vue';
 import { useStore } from '../store';
 import { v4 as uuid } from 'uuid';
-import NodeInput from './NodeInput.vue';
-import NodeOutput from './NodeOutput.vue';
-import AudioParamInput from './AudioParamInput.vue';
-import AudioParamOutput from './AudioParamOutput.vue';
+import NodeInputPin from './NodeInputPin.vue';
+import NodeOutputPin from './NodeOutputPin.vue';
+import AudioParamInputPin from './AudioParamInputPin.vue';
+import AudioParamOutputPin from './AudioParamOutputPin.vue';
 import ExecInPin from './ExecInPin.vue';
 import ExecOutPin from './ExecOutPin.vue';
 import IconButton from './IconButton.vue';
@@ -178,18 +178,18 @@ defineExpose({
       <div class="flex-grow h-full grid grid-cols-2 divide-x p-4">
         <div class="flex flex-col items-start gap-2 pr-4">
           <exec-in-pin v-for="number in typeObject.numberOfExecIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('deleteConnection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
-          <node-input v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('deleteConnection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
-          <audio-param-input v-for="param in typeObject.audioParams" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('deleteConnection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
+          <node-input-pin v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('deleteConnection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
+          <audio-param-input-pin v-for="param in typeObject.audioParams" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('deleteConnection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
         </div>
         <div class="flex flex-col items-end gap-2 pl-4">
           <exec-out-pin v-for="number in typeObject.numberOfExecOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
-          <node-output v-for="number in typeObject.numberOfOutputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
-          <audio-param-output v-for="number in typeObject.numberOfAudioParamOutputs" :key="number" :hooked="isHooked('audioParamOutputs', number)" @mousedown.stop="startConnectionDrag($event, 'audioParamOutputs', number, 'rgb(236 72 153)')" @touchstart.stop="startConnectionDrag($event, 'audioParamOutputs', number, 'rgb(236 72 153)')" @touchend="endConnectionMobile" />
+          <node-output-pin v-for="number in typeObject.numberOfOutputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
+          <audio-param-output-pin v-for="number in typeObject.numberOfAudioParamOutputs" :key="number" :hooked="isHooked('audioParamOutputs', number)" @mousedown.stop="startConnectionDrag($event, 'audioParamOutputs', number, 'rgb(236 72 153)')" @touchstart.stop="startConnectionDrag($event, 'audioParamOutputs', number, 'rgb(236 72 153)')" @touchend="endConnectionMobile" />
         </div>
       </div>
       <div class="bg-white flex w-full justify-between items-center gap-4 p-2 h-10">
         <div class="flex items-center gap-2" v-if="node.beats != null">
-          <form-input class="w-20" :name="'beats-' + node.id" :id="'beats-' + node.id" :modelValue="node.beats" @mousedown.stop @touchstart.stop @update:modelValue="changeBeats" type="number" min="1" max="120" step="1" />
+          <form-input class="w-20" :name="'beats-' + node.id" :id="'beats-' + node.id" :model-value="node.beats" @mousedown.stop @touchstart.stop @update:model-value="changeBeats" type="number" min="1" max="120" step="1" />
           <input-label value="Beats" :for="'beats-' + node.id" />
         </div>
         <div v-else></div>

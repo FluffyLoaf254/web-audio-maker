@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { ref, onMounted, nextTick, watch } from 'vue';
 import InputLabel from './InputLabel.vue';
 import ToggleInput from './ToggleInput.vue';
 import FormInput from './FormInput.vue';
+import AudioParamGraph from './AudioParamGraph.vue';
 import { evaluate } from 'mathjs';
 import { isSimpleDataItem, isComplexDataItem, type SimpleDataItem, type DataItem, type Beat } from '../types';
 
@@ -38,10 +39,6 @@ const start = ref(0)
 const algorithm = ref('x + n')
 const values = ref(12)
 
-const viewBox = computed(() => {
-  return '0 0 ' + props.beats * 2 + ' ' + values.value * 2;
-});
-
 onMounted(() => {
   setToDefaults();
 });
@@ -68,68 +65,6 @@ const recalculateValues = () => {
   }
 
   updateValue(object);
-};
-
-const convertPixelsToRem = (pixels: number): number => {
-  return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
-};
-
-const toggleNote = (event) => {
-  const beat = Math.round(convertPixelsToRem(event.offsetX / 2) + 0.5);
-  const index = Math.round(values.value - (convertPixelsToRem(event.offsetY / 2) + 0.5));
-  const value = generateValue(index);
-  if (!hasValue({ index, beat })) {
-    if (hasValue({ beat })) {
-      removeValue({ beat });
-    }
-    nextTick(() => addValue({ value, index, beat }));
-  } else {
-    removeValue({ beat });
-  }
-};
-
-const addValue = (value) => {
-  let object = newObject([]);
-  let item = props.modelValue;
-  if (isComplexDataItem(item)) {
-    object.array = [...item.array];
-  }
-  object.array.push(value);
-  updateValue(object);
-};
-
-const removeValue = (value) => {
-  let item = props.modelValue;
-  if (!isComplexDataItem(item)) {
-    return false;
-  }
-  let object = newObject([...item.array]);
-  object.array = object.array.filter(note => {
-    for (let property in value) {
-      if (note[property] != value[property]) {
-        return true;
-      }
-    }
-
-    return false;
-  });
-  updateValue(object);
-};
-
-const hasValue = (value) => {
-  let item = props.modelValue;
-  if (!isComplexDataItem(item)) {
-    return false;
-  }
-  return item.array.some(note => {
-    for (let property in value) {
-      if (note[property] != value[property]) {
-        return false;
-      }
-    }
-
-    return true;
-  });
 };
 
 const updateValue = (value) => {
@@ -190,15 +125,7 @@ const newObject = (array: Beat[]) => {
         <toggle-input :name="'static-toggle-' + title" :id="'static-toggle-' + title" :checked="isSimpleDataItem(modelValue)" @update:checked="resetValue" />
       </div>
       <div v-if="isComplexDataItem(modelValue)" class="flex flex-col gap-4">
-        <div class="relative overflow-x-scroll overscroll-y-auto bg-white w-full" ref="graph">
-          <div class="relative bg-repeat cursor-pointer" :style="{ height: values * 2 + 'rem', width: beats * 2 + 'rem' }" @click="toggleNote($event)" style="background-size: 2rem 2rem; background-image: radial-gradient(circle at center, transparent 0, transparent 0.6rem, rgba(0, 0, 0, 0.2) 0.6rem, rgba(0, 0, 0, 0.2) 0.8rem, transparent 0.8rem);">
-            <svg :viewBox="viewBox" :width="beats * 32" :height="values * 32">
-              <transition-group name="fade">
-                <circle v-for="value in modelValue.array" :key="JSON.stringify(value)" :cx="(Number(value.beat) - 0.5) * 2" :cy="(values - (value.index + 0.5)) * 2" r="0.5" fill="transparent" stroke-width="0.4" stroke="hsl(0, 70%, 70%)" />
-              </transition-group>
-            </svg>
-          </div>
-        </div>
+        <audio-param-graph :model-value="modelValue.array" @update:model-value="(beats) => updateValue(newObject(beats))" :start="start" :values="values" :algorithm="algorithm" :beats="beats" />
         <div class="flex gap-4">
           <input-label value="Start">
             <form-input :name="'dynamic-start-' + title" type="number" :min="min" v-model="start" />
@@ -213,7 +140,7 @@ const newObject = (array: Beat[]) => {
       </div>
       <div v-else>
         <input-label value="Value">
-          <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :modelValue="modelValue" @update:modelValue="updateValue" />
+          <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :mode-value="modelValue" @update:mode-value="updateValue" />
         </input-label>
       </div>
     </div>
