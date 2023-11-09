@@ -67,6 +67,16 @@ const recalculateValues = () => {
   updateValue(object);
 };
 
+const trimValues = () => {
+  let object = newObject([]);
+  let item = props.modelValue;
+  if (isComplexDataItem(item)) {
+    object.array = [...item.array].filter(value => value.index < values.value);
+  }
+
+  updateValue(object);
+}
+
 const updateValue = (value) => {
   emit('update:modelValue', value);
 };
@@ -128,14 +138,14 @@ const newObject = (array: Beat[]) => {
         <audio-param-graph :model-value="modelValue.array" @update:model-value="(beats) => updateValue(newObject(beats))" :start="start" :values="values" :algorithm="algorithm" :beats="beats" />
         <div class="flex gap-4">
           <input-label value="Start">
-            <form-input :name="'dynamic-start-' + title" type="number" :min="min" v-model="start" @change="recalculateValues()" />
+            <form-input :name="'dynamic-start-' + title" type="number" :min="min" v-model="start" @change="recalculateValues" />
           </input-label>
           <input-label value="Number">
-            <form-input :name="'dynamic-number-' + title" type="number" min="1" max="24" step="1" pattern="^[0-9]+$" v-model="values" />
+            <form-input :name="'dynamic-number-' + title" type="number" min="1" max="24" step="1" pattern="^[0-9]+$" v-model="values" @change="trimValues" />
           </input-label>
         </div>
         <input-label value="Algorithm">
-          <form-input :name="'dynamic-algorithm-' + title" class="w-full" type="text" pattern="^[xn\-\+\/\*\^0-9\.\(\)\s]*$" v-model="algorithm" @change="recalculateValues()" />
+          <form-input :name="'dynamic-algorithm-' + title" class="w-full" type="text" pattern="^[xn\-\+\/\*\^0-9\.\(\)\s]*$" v-model="algorithm" @change="recalculateValues" />
         </input-label>
       </div>
       <div v-else>
