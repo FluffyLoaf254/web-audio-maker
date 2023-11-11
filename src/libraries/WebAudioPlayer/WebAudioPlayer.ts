@@ -67,7 +67,7 @@ class WebAudioPlayer {
       }];
       node = {
         id,
-        name: 'Destinatoin',
+        name: 'Destination',
         ref: 'generated',
         type: 'destination',
         position: {
@@ -153,6 +153,9 @@ class WebAudioPlayer {
       }
       for (let output of node.outputs) {
         let outputNode = this.playingNodes.find(input => input.id == output.node);
+        if (!outputNode) {
+          continue;
+        }
         if (outputNode.type == 'mix') {
           output = outputNode.outputs[0];
           outputNode = this.playingNodes.find(input => input.id == output.node);
@@ -160,12 +163,11 @@ class WebAudioPlayer {
         if (!outputNode.object) {
           continue
         }
-        if (output.type == 'inputs') {
-          node.object.connect(outputNode.object);
-        }
+        node.object.connect(outputNode.object);
       }
     });
 
+    // handle inherited start timing
     this.playingNodes = this.playingNodes.map(node => {
       if (node.start == null) {
         node.start = this.calculateStartFromInputs(this.playingNodes, node);
