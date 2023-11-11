@@ -9,8 +9,6 @@ import AudioParamOutputPin from './AudioParamOutputPin.vue';
 import ExecInPin from './ExecInPin.vue';
 import ExecOutPin from './ExecOutPin.vue';
 import IconButton from './IconButton.vue';
-import FormInput from './FormInput.vue';
-import InputLabel from './InputLabel.vue';
 import MessageModal from './MessageModal.vue';
 import { ArrowDownIcon, ArrowsPointingOutIcon, InformationCircleIcon, MusicalNoteIcon, XMarkIcon } from '@heroicons/vue/24/solid';
 import { type InputType, type Node, type OutputType, type Position } from '../types';
@@ -30,7 +28,6 @@ type Emits = {
   playNode: [id: string]
   playUpToNode: [id: string]
   maximized: [id: string | null]
-  changeBeats: [id: string, beats: number]
 }
 
 const props = defineProps<Props>();
@@ -143,13 +140,6 @@ const playUpToNode = () => {
   emit('playUpToNode', props.node.id);
 };
 
-const changeBeats = (beats) => {
-  if (beats == '' || beats <= 0) {
-    return;
-  }
-  emit('changeBeats', props.node.id, Number(beats));
-};
-
 const showNote = (event) => {
   noteParent.value = event.target;
   noteShown.value = true;
@@ -191,11 +181,9 @@ defineExpose({
         </div>
       </div>
       <div class="bg-white flex w-full justify-between items-center gap-4 p-2 h-10">
-        <div class="flex items-center gap-2" v-if="node.beats != null">
-          <form-input class="w-20" :name="'beats-' + node.id" :id="'beats-' + node.id" :model-value="node.beats" @mousedown.stop @touchstart.stop @update:model-value="changeBeats" type="number" min="1" max="120" step="1" />
-          <input-label value="Beats" :for="'beats-' + node.id" />
+        <div class="flex items-center gap-2">
+          <component v-if="typeObject.extraComponent" :is="typeObject.extraComponent" v-bind:node="node" ref="component"></component>
         </div>
-        <div v-else></div>
         <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="categoryObject.playableUpTo" label="Play Up To Node">
           <musical-note-icon class="h-5 w-5" />
         </icon-button>

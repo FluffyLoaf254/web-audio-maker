@@ -8,6 +8,8 @@ import DestinationOptions from './components/DestinationOptions.vue';
 import GainOptions from './components/GainOptions.vue';
 import OscillatorOptions from './components/OscillatorOptions.vue';
 import KeyboardOptions from './components/KeyboardOptions.vue';
+import BeatsInput from './components/BeatsInput.vue';
+import IterationsInput from './components/IterationsInput.vue';
 
 export interface State {
   json: StateJson
@@ -68,6 +70,7 @@ export const store = createStore<State>({
         name: 'Start',
         type: 'start',
         component: null,
+        extraComponent: null,
         category: 'logic',
         note: 'This logic node must be used to start the execution of the audio graph.',
         numberOfInputs: 0,
@@ -83,6 +86,7 @@ export const store = createStore<State>({
         name: 'Oscillator',
         type: 'oscillator',
         component: markRaw(OscillatorOptions),
+        extraComponent: markRaw(BeatsInput),
         category: 'generator',
         note: 'This node can be used to generate sounds which can be further refined.',
         numberOfInputs: 0,
@@ -101,6 +105,7 @@ export const store = createStore<State>({
         name: 'Gain',
         type: 'gain',
         component: markRaw(GainOptions),
+        extraComponent: null,
         category: 'modifier',
         note: 'Scales the decibel value of the input audio.',
         numberOfInputs: 1,
@@ -118,6 +123,7 @@ export const store = createStore<State>({
         name: 'Delay',
         type: 'delay',
         component: markRaw(DelayOptions),
+        extraComponent: null,
         category: 'modifier',
         note: 'Applies a delay to the audio.',
         numberOfInputs: 1,
@@ -135,6 +141,7 @@ export const store = createStore<State>({
         name: 'Biquad Filter',
         type: 'biquad',
         component: markRaw(BiquadFilterOptions),
+        extraComponent: null,
         category: 'modifier',
         note: 'Applies a configurable low-order filter to the audio.',
         numberOfInputs: 1,
@@ -155,6 +162,7 @@ export const store = createStore<State>({
         name: 'Keyboard',
         type: 'keyboard',
         component: markRaw(KeyboardOptions),
+        extraComponent: markRaw(BeatsInput),
         category: 'driver',
         note: 'Drive nodes with an intuitive keyboard control.',
         numberOfInputs: 0,
@@ -173,6 +181,7 @@ export const store = createStore<State>({
         name: 'Audio Param',
         type: 'param',
         component: markRaw(AudioParamOptions),
+        extraComponent: markRaw(BeatsInput),
         category: 'driver',
         note: 'This node is for driving audio params from one spot.',
         numberOfInputs: 0,
@@ -190,6 +199,7 @@ export const store = createStore<State>({
         name: 'Mix',
         type: 'mix',
         component: null,
+        extraComponent: null,
         category: 'logic',
         note: 'Use this node to combine several outputs into one output.',
         numberOfInputs: 2,
@@ -205,6 +215,7 @@ export const store = createStore<State>({
         name: 'Loop',
         type: 'loop',
         component: null,
+        extraComponent: markRaw(IterationsInput),
         category: 'logic',
         note: 'Use this node to loop over a section of the graph.',
         numberOfInputs: 0,
@@ -220,6 +231,7 @@ export const store = createStore<State>({
         name: 'Destination',
         type: 'destination',
         component: markRaw(DestinationOptions),
+        extraComponent: null,
         category: 'destination',
         note: 'This node represents the audio destination (the speakers).',
         numberOfInputs: 1,

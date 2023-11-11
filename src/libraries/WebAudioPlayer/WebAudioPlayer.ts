@@ -140,7 +140,7 @@ class WebAudioPlayer {
 
     // handle loops
     compiledNodes = this.compileLoopNodes(compiledNodes);
-
+    
     // handle mix nodes
     compiledNodes = this.compileMixNodes(compiledNodes);
 
@@ -187,11 +187,41 @@ class WebAudioPlayer {
   }
 
   compileLoopNodes(nodes: Node[]): Node[] {
-    let iteration = 1;
     let loops = nodes.filter(node => node.type == 'loop');
     for (let index = 0; index < loops.length; index++) {
-      nodes = this.compileLoopNode(nodes, loops[index], iteration);
-      iteration++;
+      let loop = loops[index];
+      let iterations = (loops[index].meta.iterations ?? 2);
+      // handle no iterations
+      if (iterations == 0) {
+        if (loops[index].execOut[1]) {
+          let execOutNode = nodes.find(item => item.id == loops[index].execOut[0].node);
+          if (execOutNode) {
+            execOutNode.execIn = execOutNode.execIn.filter(input => input.node != loops[index].id);
+          }
+          loops[index].execOut[0] = loops[index].execOut[1];
+          loops[index].execOut.splice(1, 1);
+        }
+        continue;
+      }
+
+      for (let iteration = 1; iteration <= iterations - 1; iteration++) {
+        nodes = this.compileLoopNode(nodes, loop, iteration);
+        loop = nodes.find(node => node.id == loop.id.slice(0, 36) + iteration.toString());
+        loop.execOut.splice(1, 1);
+      }
+      if (loops[index].execOut[1]) {   
+        if (!loops[index].execOut[0]) {
+          loops[index].execOut[0] = loops[index].execOut[1];
+        } else {
+          let execOutNode = nodes.find(item => item.id == loops[index].execOut[0].node);
+          let chained = this.getChainedExecOutNodes(nodes, execOutNode);
+          let lastNode = this.getLastChainedExecOutNode(chained, execOutNode);
+          lastNode.execOut[0] = { ...loops[index].execOut[1] };
+          let inputNode = nodes.find(item => item.id == loops[index].execOut[1].node);
+          inputNode.execIn[0].node = lastNode.id;
+        }
+        loops[index].execOut.splice(1, 1);
+      }
     }
 
     return nodes;
@@ -203,37 +233,36 @@ class WebAudioPlayer {
       return nodes;
     }
     let copy = JSON.parse(JSON.stringify(node));
-    copy.id += iteration.toString();
-    copy.execOut[0].node += iteration.toString();
+    copy.id = copy.id.slice(0, 36) + iteration.toString();
+    copy.execOut[0].node = copy.execOut[0].node.slice(0, 36) + iteration.toString();
     if (copy.execOut[1]) {
-      delete copy.execOut[1];
+      copy.execOut.splice(1, 1);
     }
     let chained = this.getChainedExecOutNodes(nodes, execOutNode);
     let chainedCopy = JSON.parse(JSON.stringify(chained));
     chainedCopy.forEach(item => {
-      item.id += iteration.toString();
-      item.execIn.forEach(input => input.node += iteration.toString());
-      item.execOut.forEach(output => output.node += iteration.toString());
+      item.id = item.id.slice(0, 36) + iteration.toString();
+      item.execIn.forEach(input => input.node = input.node.slice(0, 36) + iteration.toString());
+      item.execOut.forEach(output => output.node = output.node.slice(0, 36) + iteration.toString());
     });
-    let execOutNodeCopy = chainedCopy.find(item => item.id == copy.execOut[0].node);
-    copy.execIn[0].node = this.getLastChainedExecOutNode(chained, execOutNode).id;
-    if (node.execOut[1]) {
-      let lastNode = this.getLastChainedExecOutNode(chainedCopy, execOutNodeCopy);
-      lastNode.execOut[0] = { ...node.execOut[1] };
-      let inputNode = nodes.find(item => item.id == node.execOut[1].node);
-      inputNode.execIn[0].node = lastNode.id;
-      delete node.execOut[1];
-    }
+    let lastOriginal = this.getLastChainedExecOutNode(chained, execOutNode);
+    copy.execIn[0].node = lastOriginal.id;
+    lastOriginal.execOut[0] = { 
+      output: 1,
+      node: copy.id,
+      type: 'execIn',
+      param: 1,
+    };
     for (let item of chainedCopy) {
       for (let audioParamInput of item.audioParamInputs) {
         let audioParamInputNode = nodes.find(item => item.id == audioParamInput.node);
         if (!audioParamInputNode) {
           continue;
         }
-        audioParamInput.node += iteration.toString();
+        audioParamInput.node = audioParamInput.node.slice(0, 36) + iteration.toString();
         let extraNode = JSON.parse(JSON.stringify(audioParamInputNode));
-        extraNode.id += iteration.toString();
-        extraNode.audioParamOutputs.forEach(output => output.node += iteration.toString());
+        extraNode.id = extraNode.id.slice(0, 36) + iteration.toString();
+        extraNode.audioParamOutputs.forEach(output => output.node = output.node.slice(0, 36) + iteration.toString());
         nodes.push(extraNode);
       }
       for (let output of item.outputs) {
