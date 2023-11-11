@@ -91,11 +91,11 @@ class WebAudioPlayer {
         data: {},
         meta: {},
         order: 0,
-      }
+      };
+      this.json.nodes.push(node);
     }
     this.reachedNodes = [];
-    const nodes = this.getAllChainedInputNodes(node);
-    this.playToSpeakers(nodes)
+    this.playToSpeakers(this.json.nodes);
   }
 
   playNode(id: string) {
@@ -136,92 +136,21 @@ class WebAudioPlayer {
   playToSpeakers(nodes) {
     const audioContext = new AudioContext;
 
-    // handle loops
-    let iteration = 1;
-    let nodesCopy = JSON.parse(JSON.stringify(nodes));
-    let loops = nodesCopy.filter(node => node.type == 'loop');
-    for (let index = 0; index < loops.length; index++) {
-      let node = loops[index];
-      let execOutNode = nodesCopy.find(item => item.id == node.execOut[0].node);
-      if (!execOutNode) {
-        continue;
-      }
-      let copy = JSON.parse(JSON.stringify(node));
-      copy.id += iteration.toString();
-      copy.execOut[0] += iteration.toString();
-      if (copy.execOut[1]) {
-        delete copy.execOut[1];
-      }
-      let chained = this.getChainedExecOutNodes(nodesCopy, execOutNode);
-      let chainedCopy = JSON.parse(JSON.stringify(chained));
-      chainedCopy.forEach(item => {
-        item.id += iteration.toString();
-        item.execIn.forEach(input => input.node += iteration.toString());
-        item.execOut.forEach(output => output.node += iteration.toString());
-      });
-      copy.execIn[0].node = this.getLastChainedExecOutNode(chained, execOutNode).id;
-      let execOutNodeCopy = chainedCopy.find(item => item.id == copy.execOut[0].node);
-      if (node.execOut[1]) {
-        this.getLastChainedExecOutNode(chainedCopy, execOutNodeCopy).execOut[0] = { ...node.execOut[1] };
-        delete node.execOut[1];
-      }
-      for (let item of chainedCopy) {
-        for (let audioParamInput of item.audioParamInputs) {
-          let audioParamInputNode = nodesCopy.find(item => item.id == audioParamInput.node);
-          if (!audioParamInputNode) {
-            continue;
-          }
-          audioParamInput.node += iteration.toString();
-          let extraNode = JSON.parse(JSON.stringify(audioParamInputNode));
-          extraNode.id += iteration.toString();
-          extraNode.audioParamOutputs.forEach(output => output.node += iteration.toString());
-          nodesCopy.push(extraNode);
-        }
-        for (let output of item.outputs) {
-          let outputNode = nodesCopy.find(item => item.id == output.node);
-          if (!outputNode) {
-            continue;
-          }
-          outputNode.inputs.push({
-            input: outputNode.inputs.length,
-            node: item.id,
-            type: 'inputs',
-            param: outputNode.inputs.length,
-          });
-        }
-      }
-      nodesCopy.push(copy);
-      nodesCopy = nodesCopy.concat(chainedCopy);
-      iteration++;
-    }
+    let compiledNodes = JSON.parse(JSON.stringify(nodes));
 
-    this.playingNodes = nodesCopy.map((node: Node): Node & NodeTrackingInformation => Object.assign({}, node, {
-      start: this.calculateStart(nodesCopy, node),
-      playing: false,
-      object: this.createNode(audioContext, node.type, node.data),
-      beats: node.beats || this.calculateBeats(nodesCopy, node),
-      scheduling: false,
-    }));
+    // handle loops
+    compiledNodes = this.compileLoopNodes(compiledNodes);
 
     // handle mix nodes
-    this.playingNodes.filter(node => node.type == 'mix').forEach(node => {
-      for (let input of node.inputs) {
-        let inputNode = this.playingNodes.find(item => item.id == input.node);
-        if (!inputNode) {
-          continue;
-        }
-        inputNode.outputs = node.outputs;
-      }
+    compiledNodes = this.compileMixNodes(compiledNodes);
 
-      for (let output of node.outputs) {
-        let outputNode = this.playingNodes.find(item => item.id == output.node);
-        if (!outputNode) {
-          continue;
-        }
-        outputNode.inputs = node.inputs;
-      }
-    });
-    this.playingNodes = this.playingNodes.filter(node => node.type != 'mix');
+    this.playingNodes = compiledNodes.map((node: Node): Node & NodeTrackingInformation => Object.assign({}, node, {
+      start: this.calculateStart(compiledNodes, node),
+      playing: false,
+      object: this.createNode(audioContext, node.type, node.data),
+      beats: node.beats || this.calculateBeats(compiledNodes, node),
+      scheduling: false,
+    }));
 
     // handle inherited start timing
     this.playingNodes.filter(node => node.start == null).forEach(node => {
@@ -255,6 +184,110 @@ class WebAudioPlayer {
     this.reachedExecNodes = [];
     this.checkForExecLoop(start);
     this.schedule(audioContext);
+  }
+
+  compileLoopNodes(nodes: Node[]): Node[] {
+    let iteration = 1;
+    let loops = nodes.filter(node => node.type == 'loop');
+    for (let index = 0; index < loops.length; index++) {
+      nodes = this.compileLoopNode(nodes, loops[index], iteration);
+      iteration++;
+    }
+
+    return nodes;
+  }
+
+  compileLoopNode(nodes: Node[], node: Node, iteration: number): Node[] {
+    let execOutNode = nodes.find(item => item.id == node.execOut[0].node);
+    if (!execOutNode) {
+      return nodes;
+    }
+    let copy = JSON.parse(JSON.stringify(node));
+    copy.id += iteration.toString();
+    copy.execOut[0].node += iteration.toString();
+    if (copy.execOut[1]) {
+      delete copy.execOut[1];
+    }
+    let chained = this.getChainedExecOutNodes(nodes, execOutNode);
+    let chainedCopy = JSON.parse(JSON.stringify(chained));
+    chainedCopy.forEach(item => {
+      item.id += iteration.toString();
+      item.execIn.forEach(input => input.node += iteration.toString());
+      item.execOut.forEach(output => output.node += iteration.toString());
+    });
+    let execOutNodeCopy = chainedCopy.find(item => item.id == copy.execOut[0].node);
+    copy.execIn[0].node = this.getLastChainedExecOutNode(chained, execOutNode).id;
+    if (node.execOut[1]) {
+      let lastNode = this.getLastChainedExecOutNode(chainedCopy, execOutNodeCopy);
+      lastNode.execOut[0] = { ...node.execOut[1] };
+      let inputNode = nodes.find(item => item.id == node.execOut[1].node);
+      inputNode.execIn[0].node = lastNode.id;
+      delete node.execOut[1];
+    }
+    for (let item of chainedCopy) {
+      for (let audioParamInput of item.audioParamInputs) {
+        let audioParamInputNode = nodes.find(item => item.id == audioParamInput.node);
+        if (!audioParamInputNode) {
+          continue;
+        }
+        audioParamInput.node += iteration.toString();
+        let extraNode = JSON.parse(JSON.stringify(audioParamInputNode));
+        extraNode.id += iteration.toString();
+        extraNode.audioParamOutputs.forEach(output => output.node += iteration.toString());
+        nodes.push(extraNode);
+      }
+      for (let output of item.outputs) {
+        let outputNode = nodes.find(item => item.id == output.node);
+        if (!outputNode) {
+          continue;
+        }
+        outputNode.inputs.push({
+          input: output.output,
+          node: item.id,
+          type: 'outputs',
+          param: output.param,
+        });
+      }
+    }
+    nodes.push(copy);
+    nodes = nodes.concat(chainedCopy);
+
+    return nodes;
+  }
+
+  compileMixNodes(nodes: Node[]): Node[] {
+    let mixes = nodes.filter(node => node.type == 'mix');
+    for (let index = 0; index < mixes.length; index++) {
+      nodes = this.compileMixNode(nodes, mixes[index]);
+    }
+
+    return nodes;
+  }
+
+  compileMixNode(nodes: Node[], node: Node): Node[] {
+    if (!node) {
+      return nodes;
+    }
+    
+    for (let input of node.inputs) {
+      let inputNode = nodes.find(item => item.id == input.node);
+      if (!inputNode) {
+        continue;
+      }
+      inputNode.outputs = inputNode.outputs.filter(output => output.node != node.id);
+      inputNode.outputs = inputNode.outputs.concat(node.outputs);
+    }
+
+    for (let output of node.outputs) {
+      let outputNode = nodes.find(item => item.id == output.node);
+      if (!outputNode) {
+        continue;
+      }
+      outputNode.inputs = outputNode.inputs.filter(input => input.node != node.id);
+      outputNode.inputs = outputNode.inputs.concat(node.inputs);
+    }
+
+    return nodes.filter(item => item.id != node.id);
   }
 
   calculateStartFromInputs(nodes: (Node & NodeTrackingInformation)[], node: Node & NodeTrackingInformation) {
