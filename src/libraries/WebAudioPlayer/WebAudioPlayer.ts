@@ -139,10 +139,10 @@ class WebAudioPlayer {
   playToSpeakers(nodes) {
     const audioContext = new AudioContext;
     this.playingNodes = nodes.map((node: Node): Node & NodeTrackingInformation => Object.assign({}, node, {
-      start: this.calculateStart(node),
+      start: this.calculateStart(nodes, node),
       playing: false,
       object: this.createNode(audioContext, node.type, node.data),
-      beats: Number(node.beats != null ? node.beats : this.calculateBeats(nodes, node)),
+      beats: node.beats || this.calculateBeats(nodes, node),
       scheduling: false,
     }));
 
@@ -152,18 +152,26 @@ class WebAudioPlayer {
         return;
       }
       for (let output of node.outputs) {
-        let input = this.playingNodes.find(input => input.id == output.node);
-        if (input.type == 'mix') {
-          output = input.outputs[0];
-          input = this.playingNodes.find(input => input.id == output.node);
+        let outputNode = this.playingNodes.find(input => input.id == output.node);
+        if (outputNode.type == 'mix') {
+          output = outputNode.outputs[0];
+          outputNode = this.playingNodes.find(input => input.id == output.node);
         }
-        if (!input.object) {
+        if (!outputNode.object) {
           continue
         }
         if (output.type == 'inputs') {
-          node.object.connect(input.object);
+          node.object.connect(outputNode.object);
         }
       }
+    });
+
+    this.playingNodes = this.playingNodes.map(node => {
+      if (node.start == null) {
+        node.start = this.calculateStartFromInputs(this.playingNodes, node);
+      }
+
+      return node;
     });
 
     const start = this.playingNodes.find(node => node.type == 'start');
@@ -176,6 +184,15 @@ class WebAudioPlayer {
     this.reachedExecNodes = [];
     this.checkForExecLoop(start);
     this.schedule(audioContext);
+  }
+
+  calculateStartFromInputs(nodes: (Node & NodeTrackingInformation)[], node: Node & NodeTrackingInformation) {
+    let start = node.start;
+    for (let child of node.inputs) {
+      const childNode = this.playingNodes.find(childNode => childNode.id == child.node);
+      start = start || this.calculateStartFromInputs(nodes, childNode);
+    }
+    return start;
   }
 
   checkForExecLoop(node: Node) {
@@ -196,14 +213,14 @@ class WebAudioPlayer {
     }
     const scheduling = this.playingNodes.map(node => {
       node.scheduling = (node.start + node.beats > this.beat && node.start < this.beat + this.scheduleBeats);
-
+      
       return node;
     }).filter(node => node.scheduling);
     if (scheduling.length == 0) {
       return;
     }
     for (let node of scheduling) {
-      if (!node.object || node.type == 'destination') {
+      if (node.start == null || !node.object || node.type == 'destination') {
         continue;
       }
 
@@ -271,8 +288,9 @@ class WebAudioPlayer {
     setTimeout(() => this.schedule(context), this.interval);
   }
 
-  calculateStart(node: Node) {
-    return this.getChainedExecNodes(node).filter(item => item.id != node.id).reduce((carry, node) => carry + Number(node.beats), 0);
+  calculateStart(nodes: Node[], node: Node) {
+    let execNodes = this.getChainedExecNodes(nodes, node).filter(item => item.id != node.id);
+    return execNodes.length ? execNodes.reduce((carry, node) => carry + Number(node.beats), 0) : null;
   }
 
   calculateBeats(nodes: Node[], node: Node) {
@@ -284,16 +302,16 @@ class WebAudioPlayer {
     return current.reduce((carry, node) => Math.max(carry, (Number(node.beats ?? 0))), 0);
   }
 
-  getChainedExecNodes(node: Node) {
-    let nodes = [node];
+  getChainedExecNodes(nodes: Node[], node: Node) {
+    let execNodes = [node];
     for (let child of node.execIn) {
-      const childNode = this.playingNodes.find(childNode => childNode.id == child.node);
+      const childNode = nodes.find(childNode => childNode.id == child.node);
       if (childNode) {
-        nodes = nodes.concat(this.getChainedExecNodes(childNode));
+        execNodes = execNodes.concat(this.getChainedExecNodes(nodes, childNode));
       }
     }
     
-    return nodes;
+    return execNodes;
   }
 
   getChainedOutputNodes(node: Node & NodeTrackingInformation) {

@@ -5,6 +5,7 @@ import InputLabel from './InputLabel.vue';
 import { evaluate } from 'mathjs';
 import { NodeData, Node, ComplexDataItem, BeatTransition } from '../types';
 import { useNodeData } from '../composables/nodeData'
+import { useNodeMeta } from '../composables/nodeMeta';
 
 interface Props {
   id: string
@@ -132,7 +133,8 @@ const viewBox = computed(() => {
   return '0 0 ' + node.value.beats * 2 + ' ' + values.value * 2;
 });
 
-useNodeData(props.id, node, data, meta);
+useNodeData(props.id, node, data);
+useNodeMeta(props.id, node, meta);
 </script>
 
 <template>

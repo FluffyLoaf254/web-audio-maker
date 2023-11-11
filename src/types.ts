@@ -84,7 +84,7 @@ export interface Node {
 };
 
 export interface NodeTrackingInformation {
-  start: number
+  start: number | null
   playing: boolean
   scheduling: boolean
   object: AudioNode | null
