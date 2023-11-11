@@ -150,7 +150,7 @@ const newObject = (array: Beat[]) => {
       </div>
       <div v-else>
         <input-label value="Value">
-          <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :model-value="modelValue" @update:mode-value="updateValue" />
+          <form-input :name="'static-' + title" class="w-full" type="number" :min="start" :max="generateValue(values)" :model-value="modelValue" @update:model-value="updateValue" />
         </input-label>
       </div>
     </div>

@@ -111,8 +111,8 @@ export interface NodeType {
   note: string
   numberOfInputs: number
   numberOfOutputs: number
-  audioParams: string[]
-  numberOfAudioParamOutputs: number
+  namesOfAudioParamInputs: string[]
+  namesOfAudioParamOutputs: number
   numberOfExecIn: number
   numberOfExecOut: number
   max: number

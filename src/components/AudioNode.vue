@@ -144,7 +144,10 @@ const playUpToNode = () => {
 };
 
 const changeBeats = (beats) => {
-  emit('changeBeats', props.node.id, beats);
+  if (beats == '' || beats <= 0) {
+    return;
+  }
+  emit('changeBeats', props.node.id, Number(beats));
 };
 
 const showNote = (event) => {
@@ -179,12 +182,12 @@ defineExpose({
         <div class="flex flex-col items-start gap-2 pr-4">
           <exec-in-pin v-for="number in typeObject.numberOfExecIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('deleteConnection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
           <node-input-pin v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('deleteConnection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
-          <audio-param-input-pin v-for="param in typeObject.audioParams" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('deleteConnection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
+          <audio-param-input-pin v-for="param in typeObject.namesOfAudioParamInputs" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('deleteConnection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
         </div>
         <div class="flex flex-col items-end gap-2 pl-4">
           <exec-out-pin v-for="number in typeObject.numberOfExecOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
           <node-output-pin v-for="number in typeObject.numberOfOutputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
-          <audio-param-output-pin v-for="number in typeObject.numberOfAudioParamOutputs" :key="number" :hooked="isHooked('audioParamOutputs', number)" @mousedown.stop="startConnectionDrag($event, 'audioParamOutputs', number, 'rgb(236 72 153)')" @touchstart.stop="startConnectionDrag($event, 'audioParamOutputs', number, 'rgb(236 72 153)')" @touchend="endConnectionMobile" />
+          <audio-param-output-pin v-for="param in typeObject.namesOfAudioParamOutputs" :key="param" :text="param" :hooked="isHooked('audioParamOutputs', param)" @mousedown.stop="startConnectionDrag($event, 'audioParamOutputs', param, 'rgb(236 72 153)')" @touchstart.stop="startConnectionDrag($event, 'audioParamOutputs', param, 'rgb(236 72 153)')" @touchend="endConnectionMobile" />
         </div>
       </div>
       <div class="bg-white flex w-full justify-between items-center gap-4 p-2 h-10">

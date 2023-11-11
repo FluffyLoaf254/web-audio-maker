@@ -94,7 +94,7 @@ class WebAudioPlayer {
       }
     }
     this.reachedNodes = [];
-    const nodes = this.getChainedNodes(node);
+    const nodes = this.getAllChainedInputNodes(node);
     this.playToSpeakers(nodes)
   }
 
@@ -105,9 +105,6 @@ class WebAudioPlayer {
     };
     this.generateJson();
     const node = this.json.nodes.find(node => node.id == id);
-    if (node.type != 'oscillator') {
-      return;
-    }
     const audioContext = new AudioContext;
     const playingNode: Node & NodeTrackingInformation = Object.assign({}, node, {
       start: 0,
@@ -138,13 +135,98 @@ class WebAudioPlayer {
 
   playToSpeakers(nodes) {
     const audioContext = new AudioContext;
-    this.playingNodes = nodes.map((node: Node): Node & NodeTrackingInformation => Object.assign({}, node, {
-      start: this.calculateStart(nodes, node),
+
+    // handle loops
+    let iteration = 1;
+    let nodesCopy = JSON.parse(JSON.stringify(nodes));
+    let loops = nodesCopy.filter(node => node.type == 'loop');
+    for (let index = 0; index < loops.length; index++) {
+      let node = loops[index];
+      let execOutNode = nodesCopy.find(item => item.id == node.execOut[0].node);
+      if (!execOutNode) {
+        continue;
+      }
+      let copy = JSON.parse(JSON.stringify(node));
+      copy.id += iteration.toString();
+      copy.execOut[0] += iteration.toString();
+      if (copy.execOut[1]) {
+        delete copy.execOut[1];
+      }
+      let chained = this.getChainedExecOutNodes(nodesCopy, execOutNode);
+      let chainedCopy = JSON.parse(JSON.stringify(chained));
+      chainedCopy.forEach(item => {
+        item.id += iteration.toString();
+        item.execIn.forEach(input => input.node += iteration.toString());
+        item.execOut.forEach(output => output.node += iteration.toString());
+      });
+      copy.execIn[0].node = this.getLastChainedExecOutNode(chained, execOutNode).id;
+      let execOutNodeCopy = chainedCopy.find(item => item.id == copy.execOut[0].node);
+      if (node.execOut[1]) {
+        this.getLastChainedExecOutNode(chainedCopy, execOutNodeCopy).execOut[0] = { ...node.execOut[1] };
+        delete node.execOut[1];
+      }
+      for (let item of chainedCopy) {
+        for (let audioParamInput of item.audioParamInputs) {
+          let audioParamInputNode = nodesCopy.find(item => item.id == audioParamInput.node);
+          if (!audioParamInputNode) {
+            continue;
+          }
+          audioParamInput.node += iteration.toString();
+          let extraNode = JSON.parse(JSON.stringify(audioParamInputNode));
+          extraNode.id += iteration.toString();
+          extraNode.audioParamOutputs.forEach(output => output.node += iteration.toString());
+          nodesCopy.push(extraNode);
+        }
+        for (let output of item.outputs) {
+          let outputNode = nodesCopy.find(item => item.id == output.node);
+          if (!outputNode) {
+            continue;
+          }
+          outputNode.inputs.push({
+            input: outputNode.inputs.length,
+            node: item.id,
+            type: 'inputs',
+            param: outputNode.inputs.length,
+          });
+        }
+      }
+      nodesCopy.push(copy);
+      nodesCopy = nodesCopy.concat(chainedCopy);
+      iteration++;
+    }
+
+    this.playingNodes = nodesCopy.map((node: Node): Node & NodeTrackingInformation => Object.assign({}, node, {
+      start: this.calculateStart(nodesCopy, node),
       playing: false,
       object: this.createNode(audioContext, node.type, node.data),
-      beats: node.beats || this.calculateBeats(nodes, node),
+      beats: node.beats || this.calculateBeats(nodesCopy, node),
       scheduling: false,
     }));
+
+    // handle mix nodes
+    this.playingNodes.filter(node => node.type == 'mix').forEach(node => {
+      for (let input of node.inputs) {
+        let inputNode = this.playingNodes.find(item => item.id == input.node);
+        if (!inputNode) {
+          continue;
+        }
+        inputNode.outputs = node.outputs;
+      }
+
+      for (let output of node.outputs) {
+        let outputNode = this.playingNodes.find(item => item.id == output.node);
+        if (!outputNode) {
+          continue;
+        }
+        outputNode.inputs = node.inputs;
+      }
+    });
+    this.playingNodes = this.playingNodes.filter(node => node.type != 'mix');
+
+    // handle inherited start timing
+    this.playingNodes.filter(node => node.start == null).forEach(node => {
+      node.start = this.calculateStartFromInputs(this.playingNodes, node);
+    });
 
     // connect nodes together
     this.playingNodes.forEach(node => {
@@ -156,24 +238,11 @@ class WebAudioPlayer {
         if (!outputNode) {
           continue;
         }
-        if (outputNode.type == 'mix') {
-          output = outputNode.outputs[0];
-          outputNode = this.playingNodes.find(input => input.id == output.node);
-        }
         if (!outputNode.object) {
           continue
         }
         node.object.connect(outputNode.object);
       }
-    });
-
-    // handle inherited start timing
-    this.playingNodes = this.playingNodes.map(node => {
-      if (node.start == null) {
-        node.start = this.calculateStartFromInputs(this.playingNodes, node);
-      }
-
-      return node;
     });
 
     const start = this.playingNodes.find(node => node.type == 'start');
@@ -191,7 +260,7 @@ class WebAudioPlayer {
   calculateStartFromInputs(nodes: (Node & NodeTrackingInformation)[], node: Node & NodeTrackingInformation) {
     let start = node.start;
     for (let child of node.inputs) {
-      const childNode = this.playingNodes.find(childNode => childNode.id == child.node);
+      const childNode = nodes.find(childNode => childNode.id == child.node);
       start = start || this.calculateStartFromInputs(nodes, childNode);
     }
     return start;
@@ -207,6 +276,100 @@ class WebAudioPlayer {
       const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
       this.checkForExecLoop(childNode);
     }
+  }
+
+  calculateStart(nodes: Node[], node: Node) {
+    let execNodes = this.getChainedExecInNodes(nodes, node).filter(item => item.id != node.id);
+    return execNodes.length ? execNodes.reduce((carry, node) => carry + Number(node.beats), 0) : null;
+  }
+
+  calculateBeats(nodes: Node[], node: Node) {
+    let current = [node];
+    while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
+      current = nodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
+    }
+
+    return current.reduce((carry, node) => Math.max(carry, (Number(node.beats ?? 0))), 0);
+  }
+
+  getChainedExecOutNodes(nodes: Node[], node: Node) {
+    let execNodes = [node];
+    for (let child of node.execOut) {
+      const childNode = nodes.find(childNode => childNode.id == child.node);
+      if (childNode) {
+        execNodes = execNodes.concat(this.getChainedExecOutNodes(nodes, childNode));
+      }
+    }
+    
+    return execNodes;
+  }
+
+  getLastChainedExecOutNode(nodes: Node[], start: Node): Node {
+    return this.getLastChainedExecOutNodeWithBeats(nodes, start, 0)[1];
+  }
+
+  getLastChainedExecOutNodeWithBeats(nodes: Node[], start: Node, beats: number = 0): [number, Node] {
+    let node = start;
+    beats += node.beats;
+    for (let child of start.execOut) {
+      const childNode = nodes.find(childNode => childNode.id == child.node);
+      if (childNode) {
+        let [childBeats, highestChildNode] = this.getLastChainedExecOutNodeWithBeats(nodes, childNode, beats);
+        if (childBeats > beats) {
+          beats = childBeats;
+          node = highestChildNode;
+        }
+      }
+    }
+    
+    return [beats, node];
+  }
+
+  getChainedExecInNodes(nodes: Node[], node: Node) {
+    let execNodes = [node];
+    for (let child of node.execIn) {
+      const childNode = nodes.find(childNode => childNode.id == child.node);
+      if (childNode) {
+        execNodes = execNodes.concat(this.getChainedExecInNodes(nodes, childNode));
+      }
+    }
+    
+    return execNodes;
+  }
+
+  getChainedOutputNodes(node: Node & NodeTrackingInformation) {
+    let nodes = [node];
+    for (let child of node.outputs) {
+      const childNode = this.playingNodes.find(childNode => childNode.id == child.node);
+      if (childNode && !childNode.scheduling) {
+        childNode.start = node.start;
+        childNode.scheduling = true;
+        nodes = nodes.concat(this.getChainedOutputNodes(childNode));
+      }
+    }
+
+    return nodes;
+  }
+
+  getAllChainedInputNodes(node: Node) {
+    this.reachedNodes.push(node);
+    if (this.reachedNodes.filter((item, index) => this.reachedNodes.findIndex(node => node.id == item.id) != index).length > 0) {
+      return [];
+    }
+    let nodes = [node];
+    for (let child of node.inputs) {
+      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
+      nodes = nodes.concat(this.getAllChainedInputNodes(childNode));
+    }
+    for (let child of node.audioParamInputs) {
+      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
+      nodes = nodes.concat(this.getAllChainedInputNodes(childNode));
+    }
+    for (let child of node.execIn) {
+      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
+      nodes = nodes.concat(this.getAllChainedInputNodes(childNode));
+    }
+    return nodes;
   }
 
   schedule(context: AudioContext) {
@@ -249,7 +412,7 @@ class WebAudioPlayer {
         // handle audio param nodes (forwards data properties)
         for (let output of node.audioParamInputs) {
           let outputNode = this.playingNodes.find(item => item.id == output.node);
-          data = Object.assign(data, { [output.input]: outputNode.data[outputNode.audioParamOutputs.find(param => param.output == output.param).param] });
+          data = Object.assign(data, { [output.input]: outputNode.data[outputNode.audioParamOutputs.find(param => param.output == output.param).output] });
         }
         while (beat < this.scheduleBeats && (this.beat + beat - node.start < node.beats)) {
           if (beat + this.beat >= node.start) {
@@ -288,69 +451,6 @@ class WebAudioPlayer {
     }
     this.beat += this.scheduleBeats;
     setTimeout(() => this.schedule(context), this.interval);
-  }
-
-  calculateStart(nodes: Node[], node: Node) {
-    let execNodes = this.getChainedExecNodes(nodes, node).filter(item => item.id != node.id);
-    return execNodes.length ? execNodes.reduce((carry, node) => carry + Number(node.beats), 0) : null;
-  }
-
-  calculateBeats(nodes: Node[], node: Node) {
-    let current = [node];
-    while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
-      current = nodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
-    }
-
-    return current.reduce((carry, node) => Math.max(carry, (Number(node.beats ?? 0))), 0);
-  }
-
-  getChainedExecNodes(nodes: Node[], node: Node) {
-    let execNodes = [node];
-    for (let child of node.execIn) {
-      const childNode = nodes.find(childNode => childNode.id == child.node);
-      if (childNode) {
-        execNodes = execNodes.concat(this.getChainedExecNodes(nodes, childNode));
-      }
-    }
-    
-    return execNodes;
-  }
-
-  getChainedOutputNodes(node: Node & NodeTrackingInformation) {
-    let nodes = [node];
-    for (let child of node.outputs) {
-      const childNode = this.playingNodes.find(childNode => childNode.id == child.node);
-      if (childNode && !childNode.scheduling) {
-        childNode.start = node.start;
-        childNode.scheduling = true;
-        nodes = nodes.concat(this.getChainedOutputNodes(childNode));
-      }
-    }
-
-    return nodes;
-  }
-
-  getChainedNodes(node: Node, check: boolean = true) {
-    if (check) {
-      this.reachedNodes.push(node);
-      if (this.reachedNodes.filter((item, index) => this.reachedNodes.findIndex(node => node.id == item.id) != index).length > 0) {
-        throw new Error('Loop detected!');
-      }
-    }
-    let nodes = [node];
-    for (let child of node.inputs) {
-      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      nodes = nodes.concat(this.getChainedNodes(childNode));
-    }
-    for (let child of node.audioParamInputs) {
-      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      nodes = nodes.concat(this.getChainedNodes(childNode, false));
-    }
-    for (let child of node.execIn) {
-      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      nodes = nodes.concat(this.getChainedNodes(childNode, false));
-    }
-    return nodes;
   }
 
   createNode(context: AudioContext, type: string, data: NodeData) {
