@@ -94,7 +94,6 @@ class WebAudioPlayer {
       };
       this.json.nodes.push(node);
     }
-    this.reachedNodes = [];
     this.playToSpeakers(this.json.nodes);
   }
 
@@ -214,7 +213,7 @@ class WebAudioPlayer {
           loops[index].execOut[0] = loops[index].execOut[1];
         } else {
           let execOutNode = nodes.find(item => item.id == loops[index].execOut[0].node);
-          let chained = this.getChainedExecOutNodes(nodes, execOutNode);
+          let chained = this.getAllChainedOutputNodes(nodes, execOutNode);
           let lastNode = this.getLastChainedExecOutNode(chained, execOutNode);
           lastNode.execOut[0] = { ...loops[index].execOut[1] };
           let inputNode = nodes.find(item => item.id == loops[index].execOut[1].node);
@@ -238,14 +237,15 @@ class WebAudioPlayer {
     if (copy.execOut[1]) {
       copy.execOut.splice(1, 1);
     }
-    let chained = this.getChainedExecOutNodes(nodes, execOutNode);
-    let chainedCopy = JSON.parse(JSON.stringify(chained));
+    let chainedOriginal = this.getAllChainedOutputNodes(nodes, execOutNode);
+    let chainedCopy = JSON.parse(JSON.stringify(chainedOriginal));
     chainedCopy.forEach(item => {
       item.id = item.id.slice(0, 36) + iteration.toString();
       item.execIn.forEach(input => input.node = input.node.slice(0, 36) + iteration.toString());
       item.execOut.forEach(output => output.node = output.node.slice(0, 36) + iteration.toString());
+      item.inputs.forEach(input => input.node = input.node.slice(0, 36) + iteration.toString());
     });
-    let lastOriginal = this.getLastChainedExecOutNode(chained, execOutNode);
+    let lastOriginal = this.getLastChainedExecOutNode(chainedOriginal, execOutNode);
     copy.execIn[0].node = lastOriginal.id;
     lastOriginal.execOut[0] = { 
       output: 1,
@@ -254,6 +254,7 @@ class WebAudioPlayer {
       param: 1,
     };
     for (let item of chainedCopy) {
+      // duplicate audio parameters
       for (let audioParamInput of item.audioParamInputs) {
         let audioParamInputNode = nodes.find(item => item.id == audioParamInput.node);
         if (!audioParamInputNode) {
@@ -265,17 +266,21 @@ class WebAudioPlayer {
         extraNode.audioParamOutputs.forEach(output => output.node = output.node.slice(0, 36) + iteration.toString());
         nodes.push(extraNode);
       }
+      // if we have an internal output, update it
       for (let output of item.outputs) {
-        let outputNode = nodes.find(item => item.id == output.node);
+        let outputNode = chainedCopy.find(item => item.id == output.node + iteration.toString());
         if (!outputNode) {
           continue;
         }
-        outputNode.inputs.push({
-          input: output.output,
-          node: item.id,
-          type: 'outputs',
-          param: output.param,
-        });
+        output.node = output.node.slice(0, 36) + iteration.toString();
+      }
+      // if we have an internal input, update it
+      for (let input of item.inputs) {
+        let inputNode = chainedCopy.find(item => item.id == input.node + iteration.toString());
+        if (!inputNode) {
+          continue;
+        }
+        input.node = input.node.slice(0, 36) + iteration.toString();
       }
     }
     nodes.push(copy);
@@ -354,16 +359,26 @@ class WebAudioPlayer {
     return current.reduce((carry, node) => Math.max(carry, (Number(node.beats ?? 0))), 0);
   }
 
-  getChainedExecOutNodes(nodes: Node[], node: Node) {
-    let execNodes = [node];
+  getAllChainedOutputNodes(nodes: Node[], node: Node): Node[] {
+    this.reachedNodes = [];
+    return this.getUnreachedChainedOutputNodes(nodes, node);
+  }
+
+  getUnreachedChainedOutputNodes(nodes: Node[], node: Node): Node[] {
+    this.reachedNodes.push(node);
+    if (node.type == 'destination' || this.reachedNodes.filter((item, index) => this.reachedNodes.findIndex(node => node.id == item.id) != index).length > 0) {
+      return [];
+    }
+    let outputNodes = [node];
+    for (let child of node.outputs) {
+      const childNode = nodes.find(childNode => childNode.id == child.node);
+      outputNodes = outputNodes.concat(this.getAllChainedOutputNodes(nodes, childNode));
+    }
     for (let child of node.execOut) {
       const childNode = nodes.find(childNode => childNode.id == child.node);
-      if (childNode) {
-        execNodes = execNodes.concat(this.getChainedExecOutNodes(nodes, childNode));
-      }
+      outputNodes = outputNodes.concat(this.getAllChainedOutputNodes(nodes, childNode));
     }
-    
-    return execNodes;
+    return outputNodes;
   }
 
   getLastChainedExecOutNode(nodes: Node[], start: Node): Node {
