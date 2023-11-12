@@ -208,6 +208,8 @@ class WebAudioPlayer {
         loop = nodes.find(node => node.id == loop.id.slice(0, 36) + iteration.toString());
         loop.execOut.splice(1, 1);
       }
+
+      // handle other execOut on loop node
       if (loops[index].execOut[1]) {   
         if (!loops[index].execOut[0]) {
           loops[index].execOut[0] = loops[index].execOut[1];
@@ -243,7 +245,6 @@ class WebAudioPlayer {
       item.id = item.id.slice(0, 36) + iteration.toString();
       item.execIn.forEach(input => input.node = input.node.slice(0, 36) + iteration.toString());
       item.execOut.forEach(output => output.node = output.node.slice(0, 36) + iteration.toString());
-      item.inputs.forEach(input => input.node = input.node.slice(0, 36) + iteration.toString());
     });
     let lastOriginal = this.getLastChainedExecOutNode(chainedOriginal, execOutNode);
     copy.execIn[0].node = lastOriginal.id;
