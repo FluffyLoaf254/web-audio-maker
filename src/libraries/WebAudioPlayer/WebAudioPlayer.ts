@@ -268,7 +268,7 @@ class WebAudioPlayer {
       }
       // if we have an internal output, update it
       for (let output of item.outputs) {
-        let outputNode = chainedCopy.find(item => item.id == output.node + iteration.toString());
+        let outputNode = chainedCopy.find(item => item.id == output.node.slice(0, 36) + iteration.toString());
         if (!outputNode) {
           continue;
         }
@@ -276,7 +276,7 @@ class WebAudioPlayer {
       }
       // if we have an internal input, update it
       for (let input of item.inputs) {
-        let inputNode = chainedCopy.find(item => item.id == input.node + iteration.toString());
+        let inputNode = chainedCopy.find(item => item.id == input.node.slice(0, 36) + iteration.toString());
         if (!inputNode) {
           continue;
         }
