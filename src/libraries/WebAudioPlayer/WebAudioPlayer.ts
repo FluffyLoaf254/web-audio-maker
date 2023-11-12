@@ -205,7 +205,7 @@ class WebAudioPlayer {
 
       for (let iteration = 1; iteration <= iterations - 1; iteration++) {
         nodes = this.compileLoopNode(nodes, loop, iteration);
-        loop = nodes.find(node => node.id == loop.id.slice(0, 36) + iteration.toString());
+        loop = nodes.find(node => node.id == this.iterateNodeId(loop.id, iteration));
         loop.execOut.splice(1, 1);
       }
 
@@ -234,17 +234,17 @@ class WebAudioPlayer {
       return nodes;
     }
     let copy = JSON.parse(JSON.stringify(node));
-    copy.id = copy.id.slice(0, 36) + iteration.toString();
-    copy.execOut[0].node = copy.execOut[0].node.slice(0, 36) + iteration.toString();
+    copy.id = this.iterateNodeId(copy.id, iteration);
+    copy.execOut[0].node = this.iterateNodeId(copy.execOut[0].node, iteration);
     if (copy.execOut[1]) {
       copy.execOut.splice(1, 1);
     }
     let chainedOriginal = this.getAllChainedOutputNodes(nodes, execOutNode);
     let chainedCopy = JSON.parse(JSON.stringify(chainedOriginal));
     chainedCopy.forEach(item => {
-      item.id = item.id.slice(0, 36) + iteration.toString();
-      item.execIn.forEach(input => input.node = input.node.slice(0, 36) + iteration.toString());
-      item.execOut.forEach(output => output.node = output.node.slice(0, 36) + iteration.toString());
+      item.id = this.iterateNodeId(item.id, iteration);
+      item.execIn.forEach(input => input.node = this.iterateNodeId(input.node, iteration));
+      item.execOut.forEach(output => output.node = this.iterateNodeId(output.node, iteration));
     });
     let lastOriginal = this.getLastChainedExecOutNode(chainedOriginal, execOutNode);
     copy.execIn[0].node = lastOriginal.id;
@@ -261,33 +261,37 @@ class WebAudioPlayer {
         if (!audioParamInputNode) {
           continue;
         }
-        audioParamInput.node = audioParamInput.node.slice(0, 36) + iteration.toString();
+        audioParamInput.node = this.iterateNodeId(audioParamInput.node, iteration);
         let extraNode = JSON.parse(JSON.stringify(audioParamInputNode));
-        extraNode.id = extraNode.id.slice(0, 36) + iteration.toString();
-        extraNode.audioParamOutputs.forEach(output => output.node = output.node.slice(0, 36) + iteration.toString());
+        extraNode.id = this.iterateNodeId(extraNode.id, iteration);
+        extraNode.audioParamOutputs.forEach(output => output.node = this.iterateNodeId(output.node, iteration));
         nodes.push(extraNode);
       }
       // if we have an internal output, update it
       for (let output of item.outputs) {
-        let outputNode = chainedCopy.find(item => item.id == output.node.slice(0, 36) + iteration.toString());
+        let outputNode = chainedCopy.find(item => item.id == this.iterateNodeId(output.node, iteration));
         if (!outputNode) {
           continue;
         }
-        output.node = output.node.slice(0, 36) + iteration.toString();
+        output.node = this.iterateNodeId(output.node, iteration);
       }
       // if we have an internal input, update it
       for (let input of item.inputs) {
-        let inputNode = chainedCopy.find(item => item.id == input.node.slice(0, 36) + iteration.toString());
+        let inputNode = chainedCopy.find(item => item.id == this.iterateNodeId(input.node, iteration));
         if (!inputNode) {
           continue;
         }
-        input.node = input.node.slice(0, 36) + iteration.toString();
+        input.node = this.iterateNodeId(input.node, iteration);
       }
     }
     nodes.push(copy);
     nodes = nodes.concat(chainedCopy);
 
     return nodes;
+  }
+
+  iterateNodeId(id: string, iteration: number) {
+    return id.slice(0, 36) + iteration.toString();
   }
 
   compileMixNodes(nodes: Node[]): Node[] {
