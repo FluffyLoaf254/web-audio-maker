@@ -16,6 +16,7 @@ import { watch } from 'vue';
 
 interface Props {
   node: Node
+  showTutorial: boolean
 }
 
 type Emits = {
@@ -155,45 +156,45 @@ defineExpose({
 </script>
 
 <template>
-  <div v-if="typeObject && categoryObject" class="select-none absolute cursor-move overflow-hidden bg-gray-50 shadow-md rounded" :class="maximizedClasses" ref="container" :style="transitionStyles">
+  <div v-if="typeObject && categoryObject" class="select-none absolute cursor-move overflow-hidden bg-gray-50 dark:bg-slate-600 shadow-md rounded" :class="maximizedClasses" ref="container" :style="transitionStyles">
     <div v-if="!maximized" class="flex flex-col h-full">
-      <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
+      <div class="flex bg-white dark:bg-slate-700 w-full justify-between items-center gap-4 p-2 border-l-8 dark:text-gray-200" :style="{ 'border-color': categoryObject.color }">
         <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
           <icon-button @mousedown.stop @touchstart.stop @click.capture="showNote($event)" label="Node Information">
             <information-circle-icon class="h-5 w-5" />
           </icon-button>
-          <icon-button v-if="typeObject.component" @mousedown.stop @touchstart.stop @click="maximized = true" label="Maximize Node" data-tutorial="Maximize the node here to be able to set the parameters.">
+          <icon-button v-if="typeObject.component" @mousedown.stop @touchstart.stop @click="maximized = true" label="Maximize Node" :data-tutorial="showTutorial ? 'Maximize the node here to be able to set the parameters.' : ''">
             <arrows-pointing-out-icon class="h-5 w-5" />
           </icon-button>
-          <icon-button @mousedown.stop @touchstart.stop @click="$emit('deleteNode', node.id)" label="Delete Node" data-tutorial="Delete this node.">
+          <icon-button @mousedown.stop @touchstart.stop @click="$emit('deleteNode', node.id)" label="Delete Node" :data-tutorial="showTutorial ? 'Delete this node.' : ''">
             <x-mark-icon class="h-5 w-5" />
           </icon-button>
         </div>
       </div>
-      <div class="flex-grow h-full grid grid-cols-2 divide-x p-4">
+      <div class="flex-grow h-full grid grid-cols-2 divide-x p-4 dark:text-gray-200">
         <div class="flex flex-col items-start gap-2 pr-4">
-          <exec-in-pin data-tutorial="This is an execution order input." v-for="number in typeObject.numberOfExecIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('deleteConnection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
-          <node-input-pin data-tutorial="This is an audio input." v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('deleteConnection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
-          <audio-param-input-pin data-tutorial="This is an audio parameter input." v-for="param in typeObject.namesOfAudioParamInputs" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('deleteConnection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
+          <exec-in-pin :data-tutorial="showTutorial ? 'This is an execution order input.' : ''" v-for="number in typeObject.numberOfExecIn" :key="number" :hooked="isHooked('execIn', number)" @click="$emit('deleteConnection', node.id, 'execIn', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'execIn', number)" />
+          <node-input-pin :data-tutorial="showTutorial ? 'This is an audio input.' : ''" v-for="number in typeObject.numberOfInputs" :key="number" :hooked="isHooked('inputs', number)" @click="$emit('deleteConnection', node.id, 'inputs', number)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'inputs', number)" />
+          <audio-param-input-pin :data-tutorial="showTutorial ? 'This is an audio parameter input.' : ''" v-for="param in typeObject.namesOfAudioParamInputs" :key="param" :text="param" :hooked="isHooked('audioParamInputs', param)" @click="$emit('deleteConnection', node.id, 'audioParamInputs', param)" @mousedown.stop @touchstart.stop @mouseup="endConnectionDrag($event, 'audioParamInputs', param)" />
         </div>
         <div class="flex flex-col items-end gap-2 pl-4">
-          <exec-out-pin data-tutorial="This is an execution order output." v-for="number in typeObject.numberOfExecOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
-          <node-output-pin data-tutorial="This is an audio output." v-for="number in typeObject.numberOfOutputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
-          <audio-param-output-pin data-tutorial="This is an audio parameter output." v-for="param in typeObject.namesOfAudioParamOutputs" :key="param" :text="param" :hooked="isHooked('audioParamOutputs', param)" @mousedown.stop="startConnectionDrag($event, 'audioParamOutputs', param, 'rgb(236 72 153)')" @touchstart.stop="startConnectionDrag($event, 'audioParamOutputs', param, 'rgb(236 72 153)')" @touchend="endConnectionMobile" />
+          <exec-out-pin :data-tutorial="showTutorial ? 'This is an execution order output.' : ''" v-for="number in typeObject.numberOfExecOut" :key="number" :hooked="isHooked('execOut', number)" @mousedown.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchstart.stop="startConnectionDrag($event, 'execOut', number, '#3B82F6')" @touchend="endConnectionMobile" />
+          <node-output-pin :data-tutorial="showTutorial ? 'This is an audio output.' : ''" v-for="number in typeObject.numberOfOutputs" :key="number" :hooked="isHooked('outputs', number)" @mousedown.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchstart.stop="startConnectionDrag($event, 'outputs', number, 'rgb(168 85 247)')" @touchend="endConnectionMobile" />
+          <audio-param-output-pin :data-tutorial="showTutorial ? 'This is an audio parameter output.' : ''" v-for="param in typeObject.namesOfAudioParamOutputs" :key="param" :text="param" :hooked="isHooked('audioParamOutputs', param)" @mousedown.stop="startConnectionDrag($event, 'audioParamOutputs', param, 'rgb(236 72 153)')" @touchstart.stop="startConnectionDrag($event, 'audioParamOutputs', param, 'rgb(236 72 153)')" @touchend="endConnectionMobile" />
         </div>
       </div>
-      <div class="bg-white flex w-full justify-between items-center gap-4 p-2 h-10">
+      <div class="bg-white dark:bg-slate-700 flex w-full justify-between items-center gap-4 p-2 h-10">
         <div class="flex items-center gap-2">
           <component v-if="typeObject.extraComponent" :is="typeObject.extraComponent" v-bind:node="node" ref="component"></component>
         </div>
-        <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="categoryObject.playableUpTo" label="Play Up To Node">
+        <icon-button @mousedown.stop @touchstart.stop @click="playUpToNode" v-if="categoryObject.playableUpTo" label="Play Up To Node" :data-tutorial="showTutorial ? 'Play the graph up to this node.' : ''">
           <musical-note-icon class="h-5 w-5" />
         </icon-button>
       </div>
     </div>
     <div v-else class="flex flex-col h-full">
-      <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
+      <div class="flex bg-white dark:bg-slate-700 dark:text-gray-200 w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
         <span>{{ typeObject.name }}</span>
         <div class="flex gap-2">
           <icon-button @mousedown.stop @touchstart.stop @click.capture="showNote($event)" label="Node Information">
@@ -207,7 +208,7 @@ defineExpose({
       <div class="flex-grow overflow-y-auto overscroll-y-auto" v-if="typeObject.component">
         <component :is="typeObject.component" v-bind="{ id: node.id }" ref="component"></component>
       </div>
-      <div class="bg-white flex w-full justify-end items-center gap-4 p-2 h-10">
+      <div class="bg-white dark:bg-slate-700 flex w-full justify-end items-center gap-4 p-2 h-10">
         <icon-button v-if="categoryObject.playable" @mousedown.stop @touchstart.stop @click="playNode" label="Play Node" data-tutorial="Play just this node with this button.">
           <musical-note-icon class="h-5 w-5" />
         </icon-button>

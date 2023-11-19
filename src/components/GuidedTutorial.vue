@@ -18,7 +18,7 @@ const begin = () => {
   elements.value = elements.value.filter(element => element.dataset.tutorial && element.dataset.tutorial.length > 0);
   showing.value = true;
   if (current.value) {
-    current.value.style.boxShadow = '0 0 0 0.7rem white';
+    current.value.classList.add('tutorial-element-shadow');
   }
 };
 
@@ -30,14 +30,14 @@ const next = () => {
   if (!current.value) {
     return;
   }
-  current.value.style.boxShadow = 'none';
+  current.value.classList.remove('tutorial-element-shadow');
   if (index.value >= (elements.value?.length ?? 0) - 1) {
     end();
     return;
   } else {
     index.value++;
   }
-  current.value.style.boxShadow = '0 0 0 0.7rem white';
+  current.value.classList.add('tutorial-element-shadow');
 };
 
 defineExpose({
@@ -61,7 +61,25 @@ onUnmounted(() => {
 
 <template>
   <div v-if="showing" class="z-[200] fixed w-screen h-screen">
-    <div class="absolute" style="box-shadow: 0 0 1rem 1rem white, 0 0 0 1000rem rgba(0, 0, 0, 0.3)" :style="boundsStyles"></div>
+    <div class="absolute tutorial-shadow" :style="boundsStyles"></div>
     <message-modal :show="showing" :parent="current" @close="next">{{ current?.dataset.tutorial }}</message-modal>
   </div>
 </template>
+
+<style>
+.tutorial-shadow {
+  box-shadow: 0 0 1rem 1rem white, 0 0 0 1000rem rgba(0, 0, 0, 0.3);
+}
+
+.dark .tutorial-shadow {
+  box-shadow: 0 0 1rem 1rem rgb(51 65 85), 0 0 0 1000rem rgba(0, 0, 0, 0.3);
+}
+
+.tutorial-element-shadow {
+  box-shadow: 0 0 0 0.7rem white;
+}
+
+.dark .tutorial-element-shadow {
+  box-shadow: 0 0 0 0.7rem rgb(51 65 85);
+}
+</style>

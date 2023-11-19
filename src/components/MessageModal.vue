@@ -46,9 +46,9 @@ const close = () => {
 </script>
 
 <template>
-  <teleport to="body">
+  <teleport to="#app-content">
     <div v-if="show" class="absolute z-[300] fixed w-screen h-screen top-0 left-0" @click.stop="close" @touchstart.stop @mousedown.stop>
-      <div class="absolute bg-white w-56 p-4 rounded shadow-lg" :style="positionStyles">
+      <div class="absolute bg-white w-56 p-4 rounded shadow-lg dark:bg-slate-700 dark:text-gray-200" :style="positionStyles">
         <slot></slot>
       </div>
     </div>

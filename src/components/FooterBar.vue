@@ -23,7 +23,7 @@ let input = ref('');
 </script>
 
 <template>
-  <div class="bg-white py-4 px-4 md:px-8 w-full flex justify-between gap-4 items-center">
+  <div class="bg-white py-4 px-4 md:px-8 w-full flex justify-between gap-4 items-center dark:bg-slate-700">
     <div class="flex gap-4 items-center" data-tutorial="Here, you can search for a node by name to reorient yourself in the graph in case you get lost.">
       <icon-button @click="$emit('search', input)" label="Search Nodes">
         <magnifying-glass-icon class="w-5 h-5" />
@@ -35,8 +35,8 @@ let input = ref('');
         <musical-note-icon class="w-5 h-5" />
       </icon-button>
       <label class="flex items-center gap-4" data-tutorial="Use this control to enable looping of the playback.">
-        <toggle-input name="looping" :checked="looping" @update:checked="(value) => $emit('update:looping', value)" />
-        <arrow-path-icon class="w-5 h-5" :class="{ 'text-gray-500': !looping, 'text-blue-500': looping }" />
+        <toggle-input name="looping" :checked="looping" @update:checked="(value: boolean) => $emit('update:looping', value)" />
+        <arrow-path-icon class="w-5 h-5" :class="{ 'text-gray-500 dark:text-gray-200': !looping, 'text-blue-500 dark:text-blue-400': looping }" />
       </label>
     </div>
   </div>
