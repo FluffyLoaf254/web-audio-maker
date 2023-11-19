@@ -302,7 +302,7 @@ const convertPixelsToRem = (pixels: number): number => {
 };
 
 function isTouchEvent(event: MouseEvent | TouchEvent): event is TouchEvent {
-  return event.hasOwnProperty('touches');
+  return Boolean((event as TouchEvent).touches);
 }
 
 const setMousePosition = (event: MouseEvent | TouchEvent) => {
