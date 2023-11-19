@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import MessageModal from './MessageModal.vue';
 
-const elements = ref<NodeListOf<HTMLElement>|null>(null);
+const elements = ref<HTMLElement[]|null>(null);
 const index = ref(0);
 const showing = ref(false);
 const bounds = ref<DOMRect|null>(null);
@@ -14,7 +14,8 @@ const boundsStyles = computed(() => {
 
 const begin = () => {
   index.value = 0;
-  elements.value = window.document.querySelectorAll('[data-tutorial]');
+  elements.value = Array.from(window.document.querySelectorAll('[data-tutorial]'));
+  elements.value = elements.value.filter(element => element.dataset.tutorial && element.dataset.tutorial.length > 0);
   showing.value = true;
   if (current.value) {
     current.value.style.boxShadow = '0 0 0 0.7rem white';

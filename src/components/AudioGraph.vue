@@ -499,8 +499,8 @@ const showTutorial = () => {
       <div class="flex w-full h-full relative md:ml-0 transition-all md:overflow-hidden" :class="{ '-ml-64': addMenuOpen }">
         <div class="relative overflow-hidden bg-gradient-to-tr from-purple-500 to-pink-500 w-screen md:w-full h-full" ref="graph" @mousemove="setMousePosition($event)" @touchmove="setMousePosition($event)" @mouseup="abortConnection" @touchend="abortConnection">
           <div class="absolute left-2 top-2 flex flex-col gap-2">
-            <save-button @click="saveJson" @mousemove.stop @touchmove.stop data-tutorial="Use this button to save your audio graph to a JSON file." />
-            <load-button @click="selectLoadJsonFile" @mousemove.stop @touchmove.stop data-tutorial="Use this button to load an audio graph from a JSON file." />
+            <save-button @click="saveJson" @mousemove.stop @touchmove.stop :data-tutorial="!maximized ? 'Use this button to save your audio graph to a JSON file.' : ''" />
+            <load-button @click="selectLoadJsonFile" @mousemove.stop @touchmove.stop :data-tutorial="!maximized ? 'Use this button to load an audio graph from a JSON file.' : ''" />
             <input ref="loader" @change="loadJson($event)" type="file" class="hidden">
           </div>
           <div class="bg-repeat w-full h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'background-position': finalPosition.x + 'rem ' + finalPosition.y + 'rem' }">
@@ -510,7 +510,7 @@ const showTutorial = () => {
             <audio-wire :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" v-for="wire in wires" :key="wire.id" :start="calculateStart(wire)" :end="calculateEnd(wire)" :color="wire.color" />
             <audio-wire v-if="currentWire != null" :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" :start="calculateStart(currentWire)" :end="calculateEnd(currentWire)" :color="currentWire.color" />
           </div>
-          <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop data-tutorial="Use this button to open the menu for adding new audio graph nodes. This is the place to start." />
+          <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop :data-tutorial="!maximized ? 'Use this button to open the menu for adding new audio graph nodes. This is the place to start.' : ''" />
         </div>
         <add-menu class="absolute h-full -right-64 md:relative md:right-0 transition-all" :class="{ 'md:w-64': addMenuOpen, 'md:w-0': !addMenuOpen, 'invisible': !addMenuOpen }" @add="addNode" />
       </div>

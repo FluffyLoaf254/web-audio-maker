@@ -129,7 +129,7 @@ const newObject = (array: Beat[]) => {
 <template>
   <div>
     <div class="flex flex-col gap-4" v-if="!disabled">
-      <div class="flex gap-4 items-center">
+      <div class="flex gap-4 items-center" data-tutorial="Here, you can toggle the audio parameter from a single, static value to a line graph.">
         <h3>{{ title }}</h3>
         <input-label value="Static" :for="'static-toggle-' + title" />
         <toggle-input :name="'static-toggle-' + title" :id="'static-toggle-' + title" :checked="isSimpleDataItem(modelValue)" @update:checked="resetValue" />
