@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import AudioGraph from './components/AudioGraph.vue';
 import { useSettingsStore } from './composables/settingsStore';
 
