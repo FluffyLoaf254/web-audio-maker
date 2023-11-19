@@ -60,7 +60,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="showing" class="z-[200] fixed w-screen h-screen">
+  <div v-if="showing" class="z-[300] fixed w-screen h-screen">
     <div class="absolute tutorial-shadow" :style="boundsStyles"></div>
     <message-modal :show="showing" :parent="current" @close="next">{{ current?.dataset.tutorial }}</message-modal>
   </div>
