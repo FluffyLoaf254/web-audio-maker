@@ -11,9 +11,9 @@ import LoadButton from './LoadButton.vue';
 import SaveButton from './SaveButton.vue';
 import { v4 as uuid } from 'uuid';
 import { WebAudioPlayer } from '../libraries/WebAudioPlayer';
-import { useStore } from '../store';
+import { useGraphStore } from '../composables/graphStore';
 
-const store = useStore();
+const store = useGraphStore();
 
 const mousePosition = ref({
   x: 0,
@@ -59,42 +59,42 @@ onUnmounted(() => {
 
 const bpm = computed({
   get() {
-    return store.state.json.settings.bpm;
+    return store.json.settings.bpm;
   },
-  set(value) {
-    if (value == '' || value <= 0) {
+  set(value: number) {
+    if (value <= 0) {
       return;
     }
-    store.commit('updateBpm', value);
+    store.updateBpm(value);
     player.bpm = value;
   },
 });
 
 const looping = computed({
   get() {
-    return store.state.json.settings.looping;
+    return store.json.settings.looping;
   },
   set(value) {
-    store.commit('updateLooping', value);
+    store.updateLooping(value);
     player.looping = value;
   },
 });
 
 const position = computed({
   get() {
-    return store.state.json.settings.position;
+    return store.json.settings.position;
   },
   set(value) {
-    store.commit('updatePosition', value);
+    store.updatePosition(value);
   },
 });
 
 const nodes = computed(() => {
-  return store.state.json.nodes;
+  return store.json.nodes;
 });
 
 const wires = computed(() => {
-  return store.state.json.wires;
+  return store.json.wires;
 });
 
 const graphPosition = computed(() => {
@@ -137,7 +137,7 @@ const finalPosition = computed({
 });
 
 const saveJson = () => {
-  let blob = new Blob([JSON.stringify(store.state.json)], { type: "application/json" });
+  let blob = new Blob([JSON.stringify(store.json)], { type: "application/json" });
   let url = URL.createObjectURL(blob);
   let link = document.createElement('a');
   link.href = url;
@@ -158,7 +158,7 @@ const loadJson = (event) => {
 
   reader.onload = (event) => {
     const json = JSON.parse(event.target.result as string);
-    store.commit('load', json);
+    store.load(json);
     reload();
   };
 
@@ -166,7 +166,7 @@ const loadJson = (event) => {
 };
 
 const reload = () => {
-  player = new WebAudioPlayer(store.state.json);
+  player = new WebAudioPlayer(store.json);
   player.bpm = bpm.value;
   player.looping = looping.value;
 };
@@ -221,10 +221,10 @@ const startDrag = (event, node) => {
   };
   nodes.value.forEach(item => {
     if (item.order >= node.order && item.id != node.id) {
-      store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
+      store.updateNodeOrder({ id: item.id, order: item.order - 1 });
     }
   });
-  store.commit('updateNodeOrder', { id: node.id, order: nodes.value.length });
+  store.updateNodeOrder({ id: node.id, order: nodes.value.length });
   dragRef.value = node.ref;
 };
 
@@ -232,7 +232,7 @@ const endDrag = (node) => {
   if (dragRef.value != node.ref) {
     return;
   }
-  store.commit('updateNodePosition', { id: node.id, position: {
+  store.updateNodePosition({ id: node.id, position: {
     x: node.position.x + dragPosition.value.x,
     y: node.position.y + dragPosition.value.y,
   } });
@@ -310,7 +310,7 @@ const addNode = (type) => {
     beats: type.beats,
     type: type.type,
   };
-  store.commit('addNode', node)
+  store.addNode(node)
 };
 
 const startConnection = (event, nodeId, outputType, output, position, color) => {
@@ -363,7 +363,7 @@ const hookConnection = (nodeId, inputType, input, position) => {
   currentWire.value.inputPosition = position;
   currentWire.value.input = input;
   currentWire.value.inputType = inputType;
-  store.commit('addWire', currentWire.value);
+  store.addWire(currentWire.value);
   abortConnection();
 };
 
@@ -383,17 +383,17 @@ const deleteConnection = (nodeId, type, param) => {
   if (!wire) {
     return;
   }
-  store.commit('removeWire', wire);
+  store.removeWire(wire);
 };
 
 const deleteNode = (id) => {
   const node = nodes.value.find(node => node.id == id);
   nodes.value.forEach(item => {
     if (item.order >= node.order && item.id != node.id) {
-      store.commit('updateNodeOrder', { id: item.id, order: item.order - 1 });
+      store.updateNodeOrder({ id: item.id, order: item.order - 1 });
     }
   });
-  store.dispatch('removeNode', id);
+  store.removeNode(id);
 };
 
 const calculateStart = (wire) => {

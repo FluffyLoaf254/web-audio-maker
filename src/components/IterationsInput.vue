@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useStore } from '../store';
+import { useGraphStore } from '../composables/graphStore';
 import { Node } from '../types';
 import FormInput from './FormInput.vue';
 import InputLabel from './InputLabel.vue';
@@ -11,7 +11,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const store = useStore();
+const store = useGraphStore();
 
 const iterations = ref(2);
 
@@ -20,7 +20,7 @@ const changeIterations = (iterations) => {
     return;
   }
   
-  store.commit('updateNodeMeta', { id: props.node.id, meta: { iterations: Math.floor(Number(iterations)) }});
+  store.updateNodeMeta({ id: props.node.id, meta: { iterations: Math.floor(Number(iterations)) }});
 };
 
 onMounted(() => iterations.value = (props.node.meta.iterations || iterations.value))

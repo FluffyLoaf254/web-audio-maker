@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useStore } from '../store';
+import { useGraphStore } from '../composables/graphStore';
 import { Node } from '../types';
 import FormInput from './FormInput.vue';
 import InputLabel from './InputLabel.vue';
@@ -10,14 +10,14 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const store = useStore();
+const store = useGraphStore();
 
 const changeBeats = (beats) => {
   if (beats == '' || beats <= 0) {
     return;
   }
   
-  store.commit('updateNodeBeats', { id: props.node.id, beats: Number(beats) });
+  store.updateNodeBeats({ id: props.node.id, beats: Number(beats) });
 };
 </script>
 

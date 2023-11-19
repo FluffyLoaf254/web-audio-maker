@@ -1,5 +1,3 @@
-import { ComponentPublicInstance } from 'vue';
-
 export interface StateJson {
   nodes: Node[]
   wires: Wire[]
@@ -106,13 +104,14 @@ export interface Wire {
 export interface NodeType {
   name: string
   type: string
-  component: ComponentPublicInstance | null
+  component: any | null
+  extraComponent: any | null
   category: string
   note: string
   numberOfInputs: number
   numberOfOutputs: number
   namesOfAudioParamInputs: string[]
-  namesOfAudioParamOutputs: number
+  namesOfAudioParamOutputs: string[]
   numberOfExecIn: number
   numberOfExecOut: number
   max: number

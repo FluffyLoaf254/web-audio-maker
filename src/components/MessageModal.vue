@@ -21,9 +21,9 @@ const convertPixelsToRem = (pixels: number): number => {
 const positionStyles = computed(() => {
   const bounds = props.parent.getBoundingClientRect();
   let styles = '';
-  if (convertPixelsToRem(window.innerWidth) < 24) {
+  if (convertPixelsToRem(window.innerWidth) < 28) {
     styles += 'left: ' + (convertPixelsToRem(window.innerWidth / 2) - 7) + 'rem;';
-  } else if (convertPixelsToRem(bounds.left) + 7 < convertPixelsToRem(window.innerWidth / 2)) {
+  } else if (convertPixelsToRem(bounds.left) + 15 < convertPixelsToRem(window.innerWidth)) {
     styles += 'left: ' + (convertPixelsToRem(bounds.left) + 1) + 'rem;';
   } else {
     styles += 'right: ' + (convertPixelsToRem(window.innerWidth - bounds.right) + 1) + 'rem;';

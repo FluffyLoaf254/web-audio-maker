@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useStore } from '../store';
+import { useGraphStore } from '../composables/graphStore';
 import { NodeData, Node } from '../types';
 import { useNodeData } from '../composables/nodeData'
 import AudioParam from './AudioParam.vue';
@@ -21,9 +21,9 @@ const data = ref<NodeData>({
 
 useNodeData(props.id, node, data);
 
-const store = useStore();
+const store = useGraphStore();
 
-onMounted(() => beats.value = store.getters.inheritedBeats(node.value));
+onMounted(() => beats.value = store.inheritedBeats(node.value));
 
 const hasAudioParamInput = (param: string) => {
   return node.value.audioParamInputs.some(item => item.input == param);

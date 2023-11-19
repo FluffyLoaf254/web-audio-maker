@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useStore } from '../store';
+import { useGraphStore } from '../composables/graphStore';
 import { v4 as uuid } from 'uuid';
 import NodeInputPin from './NodeInputPin.vue';
 import NodeOutputPin from './NodeOutputPin.vue';
@@ -46,13 +46,13 @@ const height = ref(0);
 
 const container = ref(null);
 
-const store = useStore();
+const store = useGraphStore();
 
 const typeObject = computed(() => {
-  return store.getters.typeOf(props.node);
+  return store.typeOf(props.node);
 });
 const categoryObject = computed(() => {
-  return store.getters.categoryOf(typeObject.value);
+  return store.categoryOf(typeObject.value);
 });
 const maximizedClasses = computed(() => {
   return maximized.value ? 'cursor-auto rounded-none !left-0 !top-0 min-h-0 min-w-0' + extraClasses.value : 'min-h-max min-w-max w-auto h-auto';

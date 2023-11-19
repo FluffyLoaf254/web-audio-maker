@@ -1,15 +1,15 @@
-import { InjectionKey, markRaw } from 'vue';
-import { createStore, useStore as baseUseStore, Store } from 'vuex';
-import { type Node, type Wire, type StateJson, type NodeTypeCategory, type NodeType, type Position, type NodeData, isComplexDataItem } from './types'
-import AudioParamOptions from './components/AudioParamOptions.vue';
-import BiquadFilterOptions from './components/BiquadFilterOptions.vue';
-import DelayOptions from './components/DelayOptions.vue';
-import DestinationOptions from './components/DestinationOptions.vue';
-import GainOptions from './components/GainOptions.vue';
-import OscillatorOptions from './components/OscillatorOptions.vue';
-import KeyboardOptions from './components/KeyboardOptions.vue';
-import BeatsInput from './components/BeatsInput.vue';
-import IterationsInput from './components/IterationsInput.vue';
+import { markRaw } from 'vue';
+import { defineStore } from 'pinia';
+import { type Node, type Wire, type StateJson, type NodeTypeCategory, type NodeType, type Position, type NodeData, isComplexDataItem } from '../types';
+import AudioParamOptions from '../components/AudioParamOptions.vue';
+import BiquadFilterOptions from '../components/BiquadFilterOptions.vue';
+import DelayOptions from '../components/DelayOptions.vue';
+import DestinationOptions from '../components/DestinationOptions.vue';
+import GainOptions from '../components/GainOptions.vue';
+import OscillatorOptions from '../components/OscillatorOptions.vue';
+import KeyboardOptions from '../components/KeyboardOptions.vue';
+import BeatsInput from '../components/BeatsInput.vue';
+import IterationsInput from '../components/IterationsInput.vue';
 
 export interface State {
   json: StateJson
@@ -17,10 +17,8 @@ export interface State {
   nodeTypes: NodeType[]
 };
 
-export const key: InjectionKey<Store<State>> = Symbol();
-
-export const store = createStore<State>({
-  state: {
+export const useGraphStore = defineStore('graph', {
+  state: (): State => ({
     json: {
       nodes: [],
       wires: [],
@@ -244,7 +242,7 @@ export const store = createStore<State>({
         beats: null,
       },
     ],
-  },
+  }),
   
   getters: {
     categoryOf(state: State) {
@@ -278,92 +276,82 @@ export const store = createStore<State>({
       }
     },
   },
-  
-  mutations: {
-    load(state: State, json: StateJson) {
-      state.json = json;
+
+  actions: {
+    load(json: StateJson) {
+      this.json = json;
     },
-    addNode(state: State, node: Node) {
-      state.json.nodes.push(node);
+    addNode(node: Node) {
+      this.json.nodes.push(node);
     },
-    removeNode(state: State, id: string) {
-      state.json.nodes = state.json.nodes.filter(node => node.id != id);
+    removeNode(id: string) {
+      this.json.wires
+        .filter(wire => wire.inputNode == id || wire.outputNode == id)
+        .forEach(wire => this.removeWire(wire));
+      this.json.nodes = this.json.nodes.filter(node => node.id != id);
     },
-    updateNodePosition(state: State, { id, position }: { id: string, position: Position }) {
-      const index = state.json.nodes.findIndex(node => node.id == id);
-      state.json.nodes[index].position = position;
+    updateNodePosition({ id, position }: { id: string, position: Position }) {
+      const index = this.json.nodes.findIndex(node => node.id == id);
+      this.json.nodes[index].position = position;
     },
-    updateNodeBeats(state: State, { id, beats }: { id: string, beats: number }) {
-      const index = state.json.nodes.findIndex(node => node.id == id);
-      state.json.nodes[index].beats = beats;
-      for (let property in state.json.nodes[index].data) {
-        let data = state.json.nodes[index].data[property];
+    updateNodeBeats({ id, beats }: { id: string, beats: number }) {
+      const index = this.json.nodes.findIndex(node => node.id == id);
+      this.json.nodes[index].beats = beats;
+      for (let property in this.json.nodes[index].data) {
+        let data = this.json.nodes[index].data[property];
         if (isComplexDataItem(data)) {
           data.array = data.array.filter(item => item.beat <= beats);
         }
       }
     },
-    updateNodeOrder(state: State, { id, order }: { id: string, order: number }) {
-      const index = state.json.nodes.findIndex(node => node.id == id);
-      state.json.nodes[index].order = order;
+    updateNodeOrder({ id, order }: { id: string, order: number }) {
+      const index = this.json.nodes.findIndex(node => node.id == id);
+      this.json.nodes[index].order = order;
     },
-    updateNodeData(state: State, { id, data }: { id: string, data: NodeData }) {
-      const index = state.json.nodes.findIndex(node => node.id == id);
+    updateNodeData({ id, data }: { id: string, data: NodeData }) {
+      const index = this.json.nodes.findIndex(node => node.id == id);
       for (let property in data) {
-        state.json.nodes[index].data[property] = data[property];
+        this.json.nodes[index].data[property] = data[property];
       }
     },
-    updateNodeMeta(state: State, { id, meta }: { id: string, meta: any }) {
-      const index = state.json.nodes.findIndex(node => node.id == id);
+    updateNodeMeta({ id, meta }: { id: string, meta: any }) {
+      const index = this.json.nodes.findIndex(node => node.id == id);
       for (let property in meta) {
-        state.json.nodes[index].meta[property] = meta[property];
+        this.json.nodes[index].meta[property] = meta[property];
       }
     },
-    addWire(state: State, wire: Wire) {
-      const outputIndex = state.json.nodes.findIndex(node => node.id == wire.outputNode);
-      state.json.nodes[outputIndex][wire.outputType].push({
+    addWire(wire: Wire) {
+      const outputIndex = this.json.nodes.findIndex(node => node.id == wire.outputNode);
+      this.json.nodes[outputIndex][wire.outputType].push({
         output: wire.output,
         node: wire.inputNode,
         type: wire.inputType,
         param: wire.input,
       });
-      const inputIndex = state.json.nodes.findIndex(node => node.id == wire.inputNode);
-      state.json.nodes[inputIndex][wire.inputType].push({
+      const inputIndex = this.json.nodes.findIndex(node => node.id == wire.inputNode);
+      this.json.nodes[inputIndex][wire.inputType].push({
         input: wire.input,
         node: wire.outputNode,
         type: wire.outputType,
         param: wire.output,
       });
-      state.json.wires.push(wire);
+      this.json.wires.push(wire);
     },
-    removeWire(state: State, wire: Wire) {
-      state.json.wires = state.json.wires.filter(item => item.id != wire.id);
-      const outputIndex = state.json.nodes.findIndex(node => node.id == wire.outputNode);
-      state.json.nodes[outputIndex][wire.outputType] = state.json.nodes[outputIndex][wire.outputType].filter(output => !(output.output == wire.output && output.node == wire.inputNode && output.type == wire.inputType && output.param == wire.input));
-      const inputIndex = state.json.nodes.findIndex(node => node.id == wire.inputNode);
-      state.json.nodes[inputIndex][wire.inputType] = state.json.nodes[inputIndex][wire.inputType].filter(input => !(input.input == wire.input && input.node == wire.outputNode && input.type == wire.outputType && input.param == wire.output));
+    removeWire(wire: Wire) {
+      this.json.wires = this.json.wires.filter(item => item.id != wire.id);
+      const outputIndex = this.json.nodes.findIndex(node => node.id == wire.outputNode);
+      this.json.nodes[outputIndex][wire.outputType] = this.json.nodes[outputIndex][wire.outputType].filter(output => !(output.output == wire.output && output.node == wire.inputNode && output.type == wire.inputType && output.param == wire.input));
+      const inputIndex = this.json.nodes.findIndex(node => node.id == wire.inputNode);
+      this.json.nodes[inputIndex][wire.inputType] = this.json.nodes[inputIndex][wire.inputType].filter(input => !(input.input == wire.input && input.node == wire.outputNode && input.type == wire.outputType && input.param == wire.output));
     },
-    updatePosition(state: State, position: Position) {
-      state.json.settings.position = position;
+    updatePosition(position: Position) {
+      this.json.settings.position = position;
     },
-    updateBpm(state: State, bpm: number) {
-      state.json.settings.bpm = bpm;
+    updateBpm(bpm: number) {
+      this.json.settings.bpm = bpm;
     },
-    updateLooping(state: State, looping: boolean) {
-      state.json.settings.looping = looping;
-    },
-  },
-
-  actions: {
-    removeNode(context, id: string) {
-      context.state.json.wires
-        .filter(wire => wire.inputNode == id || wire.outputNode == id)
-        .forEach(wire => this.commit('removeWire', wire));
-      context.commit('removeNode', id);
+    updateLooping(looping: boolean) {
+      this.json.settings.looping = looping;
     },
   },
 });
-
-export function useStore () {
-  return baseUseStore(key);
-};

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useStore } from '../store';
+import { useGraphStore } from '../composables/graphStore';
 import FormInput from './FormInput.vue';
 import MessageModal from './MessageModal.vue';
 import IconButton from './IconButton.vue';
@@ -16,17 +16,17 @@ let input = ref('');
 let currentNote = ref(false);
 let currentNoteParent = ref(null);
 
-const store = useStore();
+const store = useGraphStore();
 
 const foundTypes = computed(() => {
-  return store.state.nodeTypes.filter(node => node.name.toLowerCase().includes(input.value.toLowerCase()));
+  return store.nodeTypes.filter(node => node.name.toLowerCase().includes(input.value.toLowerCase()));
 });
 
 const getCategoryOf = (type) => {
-  return store.getters.categoryOf(type);
+  return store.categoryOf(type);
 };
 const numberOfType = (type) => {
-  return store.getters.numberOfType(type);
+  return store.numberOfType(type);
 };
 const showNote = (event, note) => {
   currentNoteParent.value = event.target;
