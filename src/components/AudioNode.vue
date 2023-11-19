@@ -11,7 +11,7 @@ import ExecOutPin from './ExecOutPin.vue';
 import IconButton from './IconButton.vue';
 import MessageModal from './MessageModal.vue';
 import { ArrowDownIcon, ArrowsPointingOutIcon, InformationCircleIcon, MusicalNoteIcon, XMarkIcon } from '@heroicons/vue/24/solid';
-import { type InputType, type Node, type OutputType, type Position } from '../types';
+import { type InputType, type Node, type OutputType, type Position, isInput, isOutput } from '../types';
 import { watch } from 'vue';
 
 interface Props {
@@ -20,14 +20,14 @@ interface Props {
 
 type Emits = {
   mobileConnection: []
-  startConnection: [event: Event, id: string, type: OutputType, param: string | number, position: Position, color: string]
-  hookConnection: [id: string, type: InputType, param: string | number, position: Position]
+  startConnection: [event: MouseEvent | TouchEvent, id: string, type: OutputType, param: string | number, position: Position, color: string]
+  hookConnection: [nodeId: string, type: InputType, param: string | number, position: Position]
   abortConnection: []
-  deleteConnection: [id: string, type: InputType, param: string | number]
-  deleteNode: [id: string]
-  playNode: [id: string]
-  playUpToNode: [id: string]
-  maximized: [id: string | null]
+  deleteConnection: [nodeId: string, type: InputType, param: string | number]
+  deleteNode: [nodeId: string]
+  playNode: [nodeId: string]
+  playUpToNode: [nodeId: string]
+  maximized: [nodeId: string | null]
 }
 
 const props = defineProps<Props>();
@@ -37,14 +37,17 @@ const emit = defineEmits<Emits>();
 const maximized = ref(false);
 const recentlyTransitioned = ref(false);
 const extraClasses = ref('');
-const dragging = ref(null);
+const dragging = ref<{
+  type: OutputType
+  param: number | string
+}|null>(null);
 const noteShown = ref(false);
-const noteParent = ref(null);
+const noteParent = ref<HTMLElement|null>(null);
 const noteKey = ref(uuid());
 const width = ref(0);
 const height = ref(0);
 
-const container = ref(null);
+const container = ref<HTMLElement|null>(null);
 
 const store = useGraphStore();
 
@@ -52,7 +55,7 @@ const typeObject = computed(() => {
   return store.typeOf(props.node);
 });
 const categoryObject = computed(() => {
-  return store.categoryOf(typeObject.value);
+  return typeObject.value ? store.categoryOf(typeObject.value) : null;
 });
 const maximizedClasses = computed(() => {
   return maximized.value ? 'cursor-auto rounded-none !left-0 !top-0 min-h-0 min-w-0' + extraClasses.value : 'min-h-max min-w-max w-auto h-auto';
@@ -63,8 +66,8 @@ const transitionStyles = computed(() => {
 
 watch(maximized, (value) => {
   if (value) {
-    width.value = container.value.offsetWidth;
-    height.value = container.value.offsetHeight;
+    width.value = container.value?.offsetWidth ?? 0;
+    height.value = container.value?.offsetHeight ?? 0;
   }
   recentlyTransitioned.value = true;
   setTimeout(() => recentlyTransitioned.value = false, 500);
@@ -81,16 +84,16 @@ const abort = () => {
   dragging.value = null;
 };
 
-const startConnectionDrag = (event, type, param, color) => {
+const startConnectionDrag = (event: MouseEvent | TouchEvent, type: OutputType, param: string | number, color: string) => {
   dragging.value = { type, param };
   const position = {
     x: 16,
     y: 16,
   };
-  let current = event.target;
-  while (current != container.value) {
+  let current: Element | null = event.target as Element;
+  while (current && current != container.value) {
     if (!(current instanceof HTMLElement)) {
-      current = current.parentNode;
+      current = current.parentElement;
       continue;
     }
     position.x += current.offsetLeft;
@@ -100,12 +103,12 @@ const startConnectionDrag = (event, type, param, color) => {
   emit('startConnection', event, props.node.id, type, param, position, color);
 };
 
-const isHooked = (type, param) => {
+const isHooked = (type: InputType | OutputType, param: string | number) => {
   return (dragging.value && dragging.value.type == type && dragging.value.param == param)
-    || props.node[type].some(connection => (connection.input || connection.output) == param);
+    || props.node[type].some(connection => (isInput(connection) && connection.input || isOutput(connection) && connection.output) == param);
 };
 
-const endConnectionDrag = (event, type, input) => {
+const endConnectionDrag = (event: Event, type: InputType, input: string | number) => {
   abort();
   if (isHooked(type, input)) {
     emit('abortConnection');
@@ -115,10 +118,10 @@ const endConnectionDrag = (event, type, input) => {
     x: 16,
     y: 16,
   };
-  let current = event.target;
-  while (current != container.value) {
+  let current: Element | null = event.target as Element;
+  while (current && current != container.value) {
     if (!(current instanceof HTMLElement)) {
-      current = current.parentNode;
+      current = current.parentElement;
       continue;
     }
     position.x += current.offsetLeft;
@@ -140,8 +143,8 @@ const playUpToNode = () => {
   emit('playUpToNode', props.node.id);
 };
 
-const showNote = (event) => {
-  noteParent.value = event.target;
+const showNote = (event: MouseEvent) => {
+  noteParent.value = event.target as HTMLElement;
   noteShown.value = true;
   noteKey.value = uuid();
 };
@@ -152,7 +155,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="select-none absolute cursor-move overflow-hidden bg-gray-50 shadow-md rounded" :class="maximizedClasses" ref="container" :style="transitionStyles">
+  <div v-if="typeObject && categoryObject" class="select-none absolute cursor-move overflow-hidden bg-gray-50 shadow-md rounded" :class="maximizedClasses" ref="container" :style="transitionStyles">
     <div v-if="!maximized" class="flex flex-col h-full">
       <div class="flex bg-white w-full justify-between items-center gap-4 p-2 border-l-8" :style="{ 'border-color': categoryObject.color }">
         <span>{{ typeObject.name }}</span>

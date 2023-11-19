@@ -1,6 +1,6 @@
 <script setup lang="ts">
 interface Props {
-  modelValue?: number | string
+  modelValue?: number | string | null
   type?: 'number' | 'text'
   id?: string
   name?: string

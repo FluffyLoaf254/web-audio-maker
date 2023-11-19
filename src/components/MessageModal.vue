@@ -3,7 +3,7 @@ import { computed } from 'vue';
 
 interface Props {
   show: boolean
-  parent: HTMLElement
+  parent: HTMLElement | null
 }
 
 type Emits = {
@@ -19,6 +19,9 @@ const convertPixelsToRem = (pixels: number): number => {
 };
 
 const positionStyles = computed(() => {
+  if (!props.parent) {
+    return '';
+  }
   const bounds = props.parent.getBoundingClientRect();
   let styles = '';
   if (convertPixelsToRem(window.innerWidth) < 28) {

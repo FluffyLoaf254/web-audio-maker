@@ -6,8 +6,8 @@ export function useNodeMeta(id: string, node: Ref<Node | null>, meta: Ref<any>) 
   const store = useGraphStore();
   
   onBeforeMount(() => {
-    node.value = store.getNode(id);
-    if (node.value.meta) {
+    node.value = store.getNode(id) ?? null;
+    if (node.value && node.value.meta) {
       for (let property in node.value.meta) {
         meta.value[property] = node.value.meta[property];
       }

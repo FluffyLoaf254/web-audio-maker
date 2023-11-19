@@ -12,8 +12,8 @@ const props = defineProps<Props>();
 
 const store = useGraphStore();
 
-const changeBeats = (beats) => {
-  if (beats == '' || beats <= 0) {
+const changeBeats = (beats: number | string) => {
+  if (beats == '' || Number(beats) <= 0) {
     return;
   }
   

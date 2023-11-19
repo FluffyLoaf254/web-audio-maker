@@ -24,10 +24,14 @@ useNodeData(props.id, node, data);
 
 const store = useGraphStore();
 
-onMounted(() => beats.value = store.inheritedBeats(node.value));
+onMounted(() => {
+  if (node.value) {
+    beats.value = store.inheritedBeats(node.value);
+  }
+});
 
 const hasAudioParamInput = (param: string) => {
-  return node.value.audioParamInputs.some(item => item.input == param);
+  return node.value?.audioParamInputs.some(item => item.input == param);
 };
 </script>
 

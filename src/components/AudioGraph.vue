@@ -12,6 +12,8 @@ import SaveButton from './SaveButton.vue';
 import { v4 as uuid } from 'uuid';
 import { WebAudioPlayer } from '../libraries/WebAudioPlayer';
 import { useGraphStore } from '../composables/graphStore';
+import { type InputType, type Node, type NodeType, type Position, type Wire, type PartialWire, isFullWire } from '../types';
+import { OutputType } from '../types';
 
 const store = useGraphStore();
 
@@ -32,19 +34,19 @@ const size = ref({
   height: 0,
 });
 const panning = ref(false);
-const dragRef = ref(null);
+const dragRef = ref<string|null>(null);
 const addMenuOpen = ref(false);
-const currentWire = ref(null);
-const playing = ref(null);
-const maximized = ref(null);
-const lastTouches = ref(null);
-const graph = ref(null);
+const currentWire = ref<PartialWire|null>(null);
+const playing = ref<string|null>(null);
+const maximized = ref<string|null>(null);
+const lastTouches = ref<TouchList|null>(null);
+const graph = ref<HTMLElement|null>(null);
 
-let player = null;
+let player: WebAudioPlayer | null = null;
 
 const setSize = () => {
-  size.value.width = convertPixelsToRem(graph.value.clientWidth);
-  size.value.height = convertPixelsToRem(graph.value.clientHeight);
+  size.value.width = convertPixelsToRem(graph.value?.clientWidth ?? 0);
+  size.value.height = convertPixelsToRem(graph.value?.clientHeight ?? 0);
 };
 
 onMounted(() => {
@@ -66,7 +68,9 @@ const bpm = computed({
       return;
     }
     store.updateBpm(value);
-    player.bpm = value;
+    if (player) {
+      player.bpm = value;
+    }
   },
 });
 
@@ -76,7 +80,9 @@ const looping = computed({
   },
   set(value) {
     store.updateLooping(value);
-    player.looping = value;
+    if (player) {
+      player.looping = value;
+    }
   },
 });
 
@@ -102,9 +108,11 @@ const graphPosition = computed(() => {
     x: 0,
     y: 0,
   };
-  let rect = graph.value.getBoundingClientRect();
-  position.x = rect.x;
-  position.y = rect.y;
+  if (graph.value) {
+    let rect = graph.value.getBoundingClientRect();
+    position.x = rect.x;
+    position.y = rect.y;
+  }
 
   return position;
 });
@@ -146,18 +154,31 @@ const saveJson = () => {
   URL.revokeObjectURL(url);
 };
 
-const loader = ref(null);
+const loader = ref<HTMLInputElement|null>(null);
 
 const selectLoadJsonFile = () => {
-  loader.value.click();
+  loader.value?.click();
 };
 
-const loadJson = (event) => {
-  const file = event.target.files[0];
+const loadJson = (event: Event) => {
+  if (!event.target) {
+    return;
+  }
+  const target = event.target as HTMLInputElement;
+  const file = target.files && target.files[0] ? target.files[0] : null;
+
+  if (!file) {
+    return;
+  }
+  
   const reader = new FileReader();
 
-  reader.onload = (event) => {
-    const json = JSON.parse(event.target.result as string);
+  reader.onload = (event: ProgressEvent) => {
+    if (!event.target) {
+      return;
+    }
+    const target = event.target as FileReader;
+    const json = JSON.parse(target.result as string);
     store.load(json);
     reload();
   };
@@ -172,6 +193,9 @@ const reload = () => {
 };
 
 const play = () => {
+  if (!player) {
+    return;
+  }
   if (!player.playing) {
     playing.value = null;
   }
@@ -184,7 +208,10 @@ const play = () => {
   playing.value = 'play';
 };
 
-const playUpTo = (nodeId) => {
+const playUpTo = (nodeId: string) => {
+  if (!player) {
+    return;
+  }
   if (!player.playing) {
     playing.value = null;
   }
@@ -197,7 +224,10 @@ const playUpTo = (nodeId) => {
   playing.value = 'playUpTo';
 };
 
-const playNode = (id) => {
+const playNode = (nodeId: string) => {
+  if (!player) {
+    return;
+  }
   if (!player.playing) {
     playing.value = null;
   }
@@ -206,11 +236,11 @@ const playNode = (id) => {
     playing.value = null;
     return;
   }
-  player.playNode(id);
+  player.playNode(nodeId);
   playing.value = 'playNode';
 };
 
-const startDrag = (event, node) => {
+const startDrag = (event: MouseEvent | TouchEvent, node: Node) => {
   if (Boolean(maximized.value)) {
     return;
   }
@@ -228,7 +258,7 @@ const startDrag = (event, node) => {
   dragRef.value = node.ref;
 };
 
-const endDrag = (node) => {
+const endDrag = (node: Node) => {
   if (dragRef.value != node.ref) {
     return;
   }
@@ -239,7 +269,7 @@ const endDrag = (node) => {
   dragRef.value = null;
 };
 
-const startPan = (event) => {
+const startPan = (event: MouseEvent | TouchEvent) => {
   if (maximized.value) {
     return;
   }
@@ -253,7 +283,10 @@ const startPan = (event) => {
 
 const endPan = () => {
   if (dragRef.value) {
-    endDrag(nodes.value.find(node => node.ref == dragRef.value));
+    const node = nodes.value?.find(node => node.ref == dragRef.value);
+    if (node) {
+      endDrag(node);
+    }
     return;
   }
   finalPosition.value = {
@@ -268,8 +301,12 @@ const convertPixelsToRem = (pixels: number): number => {
   return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
 };
 
-const setMousePosition = (event) => {
-  if (event.touches) {
+function isTouchEvent(event: MouseEvent | TouchEvent): event is TouchEvent {
+  return event.hasOwnProperty('touches');
+}
+
+const setMousePosition = (event: MouseEvent | TouchEvent) => {
+  if (isTouchEvent(event)) {
     lastTouches.value = event.touches;
     mousePosition.value = {
       x: convertPixelsToRem(event.touches[0].pageX - graphPosition.value.x),
@@ -281,14 +318,14 @@ const setMousePosition = (event) => {
       y: convertPixelsToRem(event.offsetY - graphPosition.value.y),
     };
     
-    let rect = event.target.getBoundingClientRect();
+    let rect = (event.target as Element).getBoundingClientRect();
 
     mousePosition.value.x += convertPixelsToRem(rect.x);
     mousePosition.value.y += convertPixelsToRem(rect.y);
   }
 };
 
-const addNode = (type) => {
+const addNode = (type: NodeType) => {
   const id = uuid();
   const node = {
     id,
@@ -313,10 +350,13 @@ const addNode = (type) => {
   store.addNode(node)
 };
 
-const startConnection = (event, nodeId, outputType, output, position, color) => {
+const startConnection = (event: MouseEvent | TouchEvent, nodeId: string, outputType: OutputType, output: number | string, position: Position, color: string) => {
   setMousePosition(event);
   const id = uuid();
   const node = nodes.value.find(node => node.id == nodeId);
+  if (!node) {
+    return;
+  }
   currentWire.value = {
     id,
     outputNode: node.id,
@@ -331,10 +371,10 @@ const startConnection = (event, nodeId, outputType, output, position, color) => 
   };
 };
 
-const nodeRefs = ref([]);
+const nodeRefs = ref<Record<string, InstanceType<typeof AudioNode>>>({});
 
 onBeforeUpdate(() => {
-  nodeRefs.value = [];
+  nodeRefs.value = {};
 });
 
 const abortConnection = () => {
@@ -342,11 +382,15 @@ const abortConnection = () => {
     return;
   }
 
-  nodeRefs.value[nodes.value.find(node => node.id == currentWire.value.outputNode).ref].abort();
+  const nodeRef: string | undefined = nodes.value?.find(node => node.id == currentWire.value?.outputNode)?.ref;
+
+  if (nodeRef) {
+    nodeRefs.value[nodeRef].abort();
+  }
   currentWire.value = null;
 };
 
-const hookConnection = (nodeId, inputType, input, position) => {
+const hookConnection = (nodeId: string, inputType: InputType, input: string | number, position: Position) => {
   if (!currentWire.value) {
     return;
   }
@@ -363,7 +407,7 @@ const hookConnection = (nodeId, inputType, input, position) => {
   currentWire.value.inputPosition = position;
   currentWire.value.input = input;
   currentWire.value.inputType = inputType;
-  store.addWire(currentWire.value);
+  store.addWire(currentWire.value as Wire);
   abortConnection();
 };
 
@@ -378,7 +422,7 @@ const hookConnectionMobile = () => {
   }
 };
 
-const deleteConnection = (nodeId, type, param) => {
+const deleteConnection = (nodeId: string, type: InputType, param: string | number) => {
   const wire = wires.value.find(wire => wire.inputNode == nodeId && wire.inputType == type && wire.input == param);
   if (!wire) {
     return;
@@ -386,8 +430,11 @@ const deleteConnection = (nodeId, type, param) => {
   store.removeWire(wire);
 };
 
-const deleteNode = (id) => {
+const deleteNode = (id: string) => {
   const node = nodes.value.find(node => node.id == id);
+  if (!node) {
+    return;
+  }
   nodes.value.forEach(item => {
     if (item.order >= node.order && item.id != node.id) {
       store.updateNodeOrder({ id: item.id, order: item.order - 1 });
@@ -396,28 +443,28 @@ const deleteNode = (id) => {
   store.removeNode(id);
 };
 
-const calculateStart = (wire) => {
+const calculateStart = (wire: PartialWire) => {
   let outputNode = nodes.value.find(node => node.id == wire.outputNode);
   return {
-    x: outputNode.position.x + (outputNode.ref == dragRef.value ? dragPosition.value.x : 0) + convertPixelsToRem(wire.outputPosition.x),
-    y: outputNode.position.y + (outputNode.ref == dragRef.value ? dragPosition.value.y : 0) + convertPixelsToRem(wire.outputPosition.y),
+    x: (outputNode ? outputNode.position.x + (outputNode.ref == dragRef.value ? dragPosition.value.x : 0) : 0) + convertPixelsToRem(wire.outputPosition.x),
+    y: (outputNode ? outputNode.position.y + (outputNode.ref == dragRef.value ? dragPosition.value.y : 0) : 0) + convertPixelsToRem(wire.outputPosition.y),
   };
 };
 
-const calculateEnd = (wire) => {
+const calculateEnd = (wire: PartialWire | Wire) => {
   let inputNode = nodes.value.find(node => node.id == wire.inputNode);
   return currentWire.value?.id == wire.id ? {
     x: mousePosition.value.x - finalPosition.value.x,
     y: mousePosition.value.y - finalPosition.value.y,
   } : {
-    x: inputNode.position.x + (inputNode.ref == dragRef.value ? dragPosition.value.x : 0) + convertPixelsToRem(wire.inputPosition.x),
-    y: inputNode.position.y + (inputNode.ref == dragRef.value ? dragPosition.value.y : 0) +  convertPixelsToRem(wire.inputPosition.y),
+    x: (inputNode ? inputNode.position.x + (inputNode.ref == dragRef.value ? dragPosition.value.x : 0) : 0) + (isFullWire(wire) ? convertPixelsToRem(wire.inputPosition.x) : 0),
+    y: (inputNode ? inputNode.position.y + (inputNode.ref == dragRef.value ? dragPosition.value.y : 0) : 0) +  (isFullWire(wire) ? convertPixelsToRem(wire.inputPosition.y) : 0),
   };
 };
 
-const handleMaximized = (nodeId) => {
+const handleMaximized = (nodeId: string | null) => {
   if (playing.value != 'play') {
-    player.stop();
+    player?.stop();
     playing.value = null;
   }
   if (nodeId) {
@@ -428,7 +475,7 @@ const handleMaximized = (nodeId) => {
   }
 };
 
-const search = (input) => {
+const search = (input: string) => {
   const node = nodes.value.find(node => node.name.toLowerCase().includes(input.toLowerCase()));
   if (!node) {
     return;
@@ -438,10 +485,10 @@ const search = (input) => {
   position.value = finalPosition.value;
 };
 
-const tutorial = ref(null);
+const tutorial = ref<InstanceType<typeof GuidedTutorial>|null>(null);
 
 const showTutorial = () => {
-  tutorial.value.begin();
+  tutorial.value?.begin();
 };
 </script>
 
@@ -458,10 +505,10 @@ const showTutorial = () => {
           </div>
           <div class="bg-repeat w-full h-full" :class="{ 'cursor-grab': !panning, 'cursor-grabbing': panning }" @mousedown.self="startPan($event)" @touchstart.self="startPan($event)" @mouseup.self="endPan" @touchend.self="endPan" @mouseleave="endPan" style="background-size: 3rem 3rem; background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.5) 0.5rem, transparent 0.5rem, transparent 3rem);" :style="{ 'background-position': finalPosition.x + 'rem ' + finalPosition.y + 'rem' }">
             <transition-group name="pop">
-              <audio-node :node="node" @mobile-connection="hookConnectionMobile" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="el => nodeRefs[node.ref] = el" :key="node.id" :style="{ 'z-index': (maximized == node.id) ? 200 : Math.floor((node.order / Math.max(1.0, nodes.length)) * 100.0), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
+              <audio-node :node="node" @mobile-connection="hookConnectionMobile" @play-node="playNode" @play-up-to-node="playUpTo" @mousedown="startDrag($event, node)" @touchstart="startDrag($event, node)" @mouseup="endDrag(node)" @touchend="endDrag(node)" @start-connection="startConnection" @hook-connection="hookConnection" @abort-connection="abortConnection" @delete-connection="deleteConnection" @delete-node="deleteNode" @maximized="handleMaximized" v-for="node in nodes" :ref="(el: any) => nodeRefs[node.ref] = el" :key="node.id" :style="{ 'z-index': (maximized == node.id) ? 200 : Math.floor((node.order / Math.max(1.0, nodes.length)) * 100.0), left: finalPosition.x + node.position.x + (node.ref == dragRef ? dragPosition.x : 0) + 'rem', top: finalPosition.y + node.position.y + (node.ref == dragRef ? dragPosition.y : 0) + 'rem' }" />
             </transition-group>
             <audio-wire :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" v-for="wire in wires" :key="wire.id" :start="calculateStart(wire)" :end="calculateEnd(wire)" :color="wire.color" />
-            <audio-wire v-if="Boolean(currentWire)" :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" :start="calculateStart(currentWire)" :end="calculateEnd(currentWire)" :color="currentWire.color" />
+            <audio-wire v-if="currentWire != null" :style="{ left: finalPosition.x + 'rem', top: finalPosition.y + 'rem' }" :start="calculateStart(currentWire)" :end="calculateEnd(currentWire)" :color="currentWire.color" />
           </div>
           <add-button class="absolute right-2 bottom-2" @click="addMenuOpen = !addMenuOpen" @mousemove.stop @touchmove.stop data-tutorial="Use this button to open the menu for adding new audio graph nodes. This is the place to start." />
         </div>

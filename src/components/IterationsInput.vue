@@ -15,8 +15,8 @@ const store = useGraphStore();
 
 const iterations = ref(2);
 
-const changeIterations = (iterations) => {
-  if (iterations == '' || iterations < 0) {
+const changeIterations = (iterations: number | string) => {
+  if (iterations == '' || Number(iterations) < 0) {
     return;
   }
   

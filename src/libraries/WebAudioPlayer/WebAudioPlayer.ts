@@ -1,9 +1,9 @@
 import { v4 as uuid } from 'uuid';
-import { type StateJson, type Node, NodeTrackingInformation, NodeData, isComplexDataItem } from '../../types';
+import { type StateJson, type Node, type NodeTrackingInformation, type NodeData, type Output, isComplexDataItem } from '../../types';
 
 class WebAudioPlayer {
   original: StateJson;
-  json: StateJson;
+  json: StateJson | null = null;
   playingNodes: (Node & NodeTrackingInformation)[];
   playing: boolean;
   scheduleBeats: number;
@@ -14,9 +14,9 @@ class WebAudioPlayer {
   interval: number;
   looping: boolean;
   method: {
-    name: string
-    param?: string
-  };
+    name: (param: string) => void
+    param: string
+  } | null;
 
   constructor(json: StateJson) {
     this.original = json;
@@ -38,9 +38,13 @@ class WebAudioPlayer {
 
   play() {
     this.method = {
-      name: 'play',
+      name: this.play,
+      param: '',
     };
     this.generateJson();
+    if (!this.json) {
+      return;
+    }
     const destination = this.json.nodes.find(node => node.type == 'destination');
     if (!destination) {
       return;
@@ -51,11 +55,17 @@ class WebAudioPlayer {
 
   playUpTo(id: string) {
     this.method = {
-      name: 'playUpTo',
+      name: this.playUpTo,
       param: id,
     };
     this.generateJson();
+    if (!this.json) {
+      return;
+    }
     let node = this.json.nodes.find(node => node.id == id);
+    if (!node) {
+      return;
+    }
     if (node.type != 'destination') {
       const id = uuid();
       node.execOut = [];
@@ -99,11 +109,17 @@ class WebAudioPlayer {
 
   playNode(id: string) {
     this.method = {
-      name: 'playNode',
+      name: this.playNode,
       param: id,
     };
     this.generateJson();
+    if (!this.json) {
+      return;
+    }
     const node = this.json.nodes.find(node => node.id == id);
+    if (!node) {
+      return;
+    }
     const audioContext = new AudioContext;
     const playingNode: Node & NodeTrackingInformation = Object.assign({}, node, {
       start: 0,
@@ -111,7 +127,7 @@ class WebAudioPlayer {
       object: this.createNode(audioContext, node.type, node.data),
       scheduling: true,
     });
-    playingNode.object.connect(audioContext.destination);
+    playingNode.object?.connect(audioContext.destination);
     this.playingNodes = [playingNode];
     this.beat = 0;
     this.playing = true;
@@ -132,7 +148,7 @@ class WebAudioPlayer {
     this.playing = false;
   }
 
-  playToSpeakers(nodes) {
+  playToSpeakers(nodes: Node[]) {
     const audioContext = new AudioContext;
 
     let compiledNodes = JSON.parse(JSON.stringify(nodes));
@@ -205,8 +221,11 @@ class WebAudioPlayer {
 
       for (let iteration = 1; iteration <= iterations - 1; iteration++) {
         nodes = this.compileLoopNode(nodes, loop, iteration);
-        loop = nodes.find(node => node.id == this.iterateNodeId(loop.id, iteration));
-        loop.execOut.splice(1, 1);
+        const loopNode = nodes.find(node => node.id == this.iterateNodeId(loop.id, iteration));
+        if (loopNode) {
+          loop = loopNode;
+          loop.execOut.splice(1, 1);
+        }
       }
 
       // handle other execOut on loop node
@@ -215,11 +234,15 @@ class WebAudioPlayer {
           loops[index].execOut[0] = loops[index].execOut[1];
         } else {
           let execOutNode = nodes.find(item => item.id == loops[index].execOut[0].node);
-          let chained = this.getAllChainedOutputNodes(nodes, execOutNode);
-          let lastNode = this.getLastChainedExecOutNode(chained, execOutNode);
-          lastNode.execOut[0] = { ...loops[index].execOut[1] };
-          let inputNode = nodes.find(item => item.id == loops[index].execOut[1].node);
-          inputNode.execIn[0].node = lastNode.id;
+          if (execOutNode) {
+            let chained = this.getAllChainedOutputNodes(nodes, execOutNode);
+            let lastNode = this.getLastChainedExecOutNode(chained, execOutNode);
+            lastNode.execOut[0] = { ...loops[index].execOut[1] };
+            let inputNode = nodes.find(item => item.id == loops[index].execOut[1].node);
+            if (inputNode) {
+              inputNode.execIn[0].node = lastNode.id;
+            }
+          }
         }
         loops[index].execOut.splice(1, 1);
       }
@@ -241,7 +264,7 @@ class WebAudioPlayer {
     }
     let chainedOriginal = this.getAllChainedOutputNodes(nodes, execOutNode);
     let chainedCopy = JSON.parse(JSON.stringify(chainedOriginal));
-    chainedCopy.forEach(item => {
+    chainedCopy.forEach((item: Node) => {
       item.id = this.iterateNodeId(item.id, iteration);
       item.execIn.forEach(input => input.node = this.iterateNodeId(input.node, iteration));
       item.execOut.forEach(output => output.node = this.iterateNodeId(output.node, iteration));
@@ -264,12 +287,12 @@ class WebAudioPlayer {
         audioParamInput.node = this.iterateNodeId(audioParamInput.node, iteration);
         let extraNode = JSON.parse(JSON.stringify(audioParamInputNode));
         extraNode.id = this.iterateNodeId(extraNode.id, iteration);
-        extraNode.audioParamOutputs.forEach(output => output.node = this.iterateNodeId(output.node, iteration));
+        extraNode.audioParamOutputs.forEach((output: Output) => output.node = this.iterateNodeId(output.node, iteration));
         nodes.push(extraNode);
       }
       // if we have an internal output, update it
       for (let output of item.outputs) {
-        let outputNode = chainedCopy.find(item => item.id == this.iterateNodeId(output.node, iteration));
+        let outputNode = chainedCopy.find((item: Node) => item.id == this.iterateNodeId(output.node, iteration));
         if (!outputNode) {
           continue;
         }
@@ -277,7 +300,7 @@ class WebAudioPlayer {
       }
       // if we have an internal input, update it
       for (let input of item.inputs) {
-        let inputNode = chainedCopy.find(item => item.id == this.iterateNodeId(input.node, iteration));
+        let inputNode = chainedCopy.find((item: Node) => item.id == this.iterateNodeId(input.node, iteration));
         if (!inputNode) {
           continue;
         }
@@ -333,7 +356,9 @@ class WebAudioPlayer {
     let start = node.start;
     for (let child of node.inputs) {
       const childNode = nodes.find(childNode => childNode.id == child.node);
-      start = start || this.calculateStartFromInputs(nodes, childNode);
+      if (childNode) {
+        start = start || this.calculateStartFromInputs(nodes, childNode);
+      }
     }
     return start;
   }
@@ -345,8 +370,10 @@ class WebAudioPlayer {
     }
 
     for (let child of node.execOut) {
-      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      this.checkForExecLoop(childNode);
+      const childNode = this.json?.nodes.find(childNode => childNode.id == child.node);
+      if (childNode) {
+        this.checkForExecLoop(childNode);
+      }
     }
   }
 
@@ -357,7 +384,7 @@ class WebAudioPlayer {
 
   calculateBeats(nodes: Node[], node: Node) {
     let current = [node];
-    while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
+    while (current.reduce<number|null>((carry, node) => carry || node.beats, null) == null && current.length != 0) {
       current = nodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
     }
 
@@ -377,11 +404,15 @@ class WebAudioPlayer {
     let outputNodes = [node];
     for (let child of node.outputs) {
       const childNode = nodes.find(childNode => childNode.id == child.node);
-      outputNodes = outputNodes.concat(this.getAllChainedOutputNodes(nodes, childNode));
+      if (childNode) {
+        outputNodes = outputNodes.concat(this.getAllChainedOutputNodes(nodes, childNode));
+      }
     }
     for (let child of node.execOut) {
       const childNode = nodes.find(childNode => childNode.id == child.node);
-      outputNodes = outputNodes.concat(this.getAllChainedOutputNodes(nodes, childNode));
+      if (childNode) {
+        outputNodes = outputNodes.concat(this.getAllChainedOutputNodes(nodes, childNode));
+      }
     }
     return outputNodes;
   }
@@ -392,7 +423,7 @@ class WebAudioPlayer {
 
   getLastChainedExecOutNodeWithBeats(nodes: Node[], start: Node, beats: number = 0): [number, Node] {
     let node = start;
-    beats += node.beats;
+    beats += node.beats ?? 0;
     for (let child of start.execOut) {
       const childNode = nodes.find(childNode => childNode.id == child.node);
       if (childNode) {
@@ -433,33 +464,12 @@ class WebAudioPlayer {
     return nodes;
   }
 
-  getAllChainedInputNodes(node: Node) {
-    this.reachedNodes.push(node);
-    if (this.reachedNodes.filter((item, index) => this.reachedNodes.findIndex(node => node.id == item.id) != index).length > 0) {
-      return [];
-    }
-    let nodes = [node];
-    for (let child of node.inputs) {
-      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      nodes = nodes.concat(this.getAllChainedInputNodes(childNode));
-    }
-    for (let child of node.audioParamInputs) {
-      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      nodes = nodes.concat(this.getAllChainedInputNodes(childNode));
-    }
-    for (let child of node.execIn) {
-      const childNode = this.json.nodes.find(childNode => childNode.id == child.node);
-      nodes = nodes.concat(this.getAllChainedInputNodes(childNode));
-    }
-    return nodes;
-  }
-
   schedule(context: AudioContext) {
     if (!this.playing) {
       return
     }
     const scheduling = this.playingNodes.map(node => {
-      node.scheduling = (node.start + node.beats > this.beat && node.start < this.beat + this.scheduleBeats);
+      node.scheduling = ((node.start ?? 0) + (node.beats ?? 0) > this.beat && (node.start ?? 0) < this.beat + this.scheduleBeats);
       
       return node;
     }).filter(node => node.scheduling);
@@ -467,7 +477,7 @@ class WebAudioPlayer {
       return;
     }
     for (let node of scheduling) {
-      if (node.start == null || !node.object || node.type == 'destination') {
+      if (node.start == null || node.beats == null || !node.object || node.type == 'destination') {
         continue;
       }
 
@@ -479,7 +489,7 @@ class WebAudioPlayer {
           node.playing = false;
           if (!this.playingNodes.some(node => node.playing)) {
             if (this.playing && this.looping) {
-              this[this.method.name](this.method.param);
+              this.method?.name(this.method?.param);
             } else {
               this.playing = false;
             }
@@ -489,40 +499,54 @@ class WebAudioPlayer {
 
       let nodes = this.getChainedOutputNodes(node);
       for (let node of nodes) {
+        if (!node.object) {
+          continue;
+        }
         let beat = 0;
         let data = node.data;
         // handle audio param nodes (forwards data properties)
         for (let output of node.audioParamInputs) {
           let outputNode = this.playingNodes.find(item => item.id == output.node);
-          data = Object.assign(data, { [output.input]: outputNode.data[outputNode.audioParamOutputs.find(param => param.output == output.param).output] });
+          if (outputNode) {
+            const audioParamOutput = outputNode.audioParamOutputs.find(param => param.output == output.param);
+            if (audioParamOutput) {
+              data = Object.assign(data, { [output.input]: outputNode.data[audioParamOutput.output] });
+            }
+          }
         }
-        while (beat < this.scheduleBeats && (this.beat + beat - node.start < node.beats)) {
-          if (beat + this.beat >= node.start) {
+        while (beat < this.scheduleBeats && (this.beat + beat - (node.start ?? 0) < (node.beats ?? 0))) {
+          if (beat + this.beat >= (node.start ?? 0)) {
             for (let param in data) {
               let item = data[param];
               if (isComplexDataItem(item)) {
-                const offset = this.beat + beat - node.start;
+                const offset = this.beat + beat - (node.start ?? 0);
                 const values = item.array.filter(value => Math.floor(value.beat - 1) <= offset);
                 if (!values.length) {
                   continue;
                 }
                 for (let value of values) {
+                  const object = node.object[param as keyof typeof node.object];
+                  if (!(object instanceof AudioParam)) {
+                    continue;
+                  }
                   switch (value.transition) {
                     case 'constant':
-                      node.object[param].setValueAtTime(value.value, Math.max(0, ((node.start + value.beat - 1) / this.bpm) * 60 - context.currentTime));
+                      object.setValueAtTime(value.value, Math.max(0, (((node.start ?? 0) + value.beat - 1) / this.bpm) * 60 - context.currentTime));
                       break;
                     case 'linear':
-                      node.object[param].linearRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, ((node.start + value.beat - 1) / this.bpm) * 60 - context.currentTime));
+                      object.linearRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, (((node.start ?? 0) + value.beat - 1) / this.bpm) * 60 - context.currentTime));
                       break;
                     case 'exponential':
-                      node.object[param].exponentialRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, ((node.start + value.beat - 1) / this.bpm) * 60 - context.currentTime));
+                      object.exponentialRampToValueAtTime(Math.max(value.value, 0.0001), Math.max(0, (((node.start ?? 0) + value.beat - 1) / this.bpm) * 60 - context.currentTime));
                       break;
                   }
                 }
               } else {
-                if (Boolean(node.object[param].value)) {
-                  node.object[param].value = (item || 0);
+                const object = node.object[param as keyof typeof node.object];
+                if (object instanceof AudioParam && typeof item == 'number') {
+                  object.value = (item || 0);
                 }
+
                 continue;
               }
             }
@@ -536,7 +560,7 @@ class WebAudioPlayer {
   }
 
   createNode(context: AudioContext, type: string, data: NodeData) {
-    const options = {};
+    const options: Record<string, number|string> = {};
     for (let param in data) {
       let item = data[param];
       if (isComplexDataItem(item)) {

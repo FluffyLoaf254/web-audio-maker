@@ -6,8 +6,8 @@ export function useNodeData(id: string, node: Ref<Node | null>, data: Ref<NodeDa
   const store = useGraphStore();
   
   onBeforeMount(() => {
-    node.value = store.getNode(id);
-    if (node.value.data) {
+    node.value = store.getNode(id) ?? null;
+    if (node.value && node.value.data) {
       for (let property in node.value.data) {
         data.value[property] = node.value.data[property];
       }

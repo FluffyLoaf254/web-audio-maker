@@ -13,7 +13,7 @@ interface Props {
   title: string
   disabled?: boolean
   min?: number
-  beats?: number | null
+  beats: number | null
   startDefault?: number
   algorithmDefault?: string
   valuesDefault?: number
@@ -77,7 +77,7 @@ const trimValues = () => {
   updateValue(object);
 }
 
-const updateValue = (value) => {
+const updateValue = (value: DataItem) => {
   emit('update:modelValue', value);
 };
 
@@ -135,7 +135,7 @@ const newObject = (array: Beat[]) => {
         <toggle-input :name="'static-toggle-' + title" :id="'static-toggle-' + title" :checked="isSimpleDataItem(modelValue)" @update:checked="resetValue" />
       </div>
       <div v-if="isComplexDataItem(modelValue)" class="flex flex-col gap-4">
-        <audio-param-graph :model-value="modelValue.array" @update:model-value="(beats) => updateValue(newObject(beats))" :start="start" :values="values" :algorithm="algorithm" :beats="beats" />
+        <audio-param-graph :model-value="modelValue.array" @update:model-value="(beats: Beat[]) => updateValue(newObject(beats))" :start="start" :values="values" :algorithm="algorithm" :beats="beats ?? 0" />
         <div class="flex gap-4">
           <input-label value="Start">
             <form-input :name="'dynamic-start-' + title" type="number" :min="min" v-model="start" @change="recalculateValues" />

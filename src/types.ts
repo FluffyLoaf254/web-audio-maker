@@ -88,7 +88,20 @@ export interface NodeTrackingInformation {
   object: AudioNode | null
 }
 
-export interface Wire {
+export interface PartialWire {
+  id: string
+  outputNode: string
+  outputPosition: Position
+  output: string | number
+  outputType: OutputType
+  inputNode: string | null
+  inputPosition: Position | null
+  input: string | number | null
+  inputType: InputType | null
+  color: string
+}
+
+export interface Wire extends PartialWire {
   id: string
   outputNode: string
   outputPosition: Position
@@ -125,12 +138,35 @@ export interface NodeTypeCategory {
   playableUpTo: boolean
 };
 
+export interface Note {
+  beat: number
+  index: number
+};
+
 export function isComplexDataItem(dataItem: DataItem): dataItem is ComplexDataItem
 {
   return typeof dataItem == 'object' ? Array.isArray(dataItem.array) : false;
-}
+};
 
 export function isSimpleDataItem(dataItem: DataItem): dataItem is SimpleDataItem
 {
   return typeof dataItem != 'object';
-}
+};
+
+export function isInput(io: Input | Output): io is Input
+{
+  return Boolean((io as Input).input);
+};
+
+export function isOutput(io: Input | Output): io is Output
+{
+  return Boolean((io as Output).output);
+};
+
+export function isFullWire(wire: Wire | PartialWire): wire is Wire
+{
+  return wire.inputNode != null
+    && wire.inputPosition != null
+    && wire.input != null
+    && wire.inputType != null;
+};

@@ -29,17 +29,17 @@ const convertPixelsToRem = (pixels: number): number => {
   return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
 };
 
-const addValue = (value) => {
+const addValue = (value: Beat) => {
   let array = [...props.modelValue];
   array.push(value);
   updateValue(array);
 };
 
-const removeValue = (value) => {
+const removeValue = (value: Partial<Beat>) => {
   let array = [...props.modelValue];
   array = array.filter(note => {
     for (let property in value) {
-      if (note[property] != value[property]) {
+      if (note[property as keyof Beat] != value[property as keyof Beat]) {
         return true;
       }
     }
@@ -49,10 +49,10 @@ const removeValue = (value) => {
   updateValue(array);
 };
 
-const hasValue = (value) => {
+const hasValue = (value: Partial<Beat>) => {
   return props.modelValue.some(note => {
     for (let property in value) {
-      if (note[property] != value[property]) {
+      if (note[property as keyof Beat] != value[property as keyof Beat]) {
         return false;
       }
     }
@@ -61,7 +61,7 @@ const hasValue = (value) => {
   });
 };
 
-const toggleNote = (event) => {
+const toggleNote = (event: MouseEvent) => {
   const beat = Math.round(convertPixelsToRem(event.offsetX / 2) + 0.5);
   const index = Math.round(props.values - (convertPixelsToRem(event.offsetY / 2) + 0.5));
   const value = generateValue(index);
@@ -116,7 +116,7 @@ const generateStroke = (value: Beat) => {
   }
 }
 
-const updateValue = (value) => {
+const updateValue = (value: Beat[]) => {
   emit('update:modelValue', value);
 };
 </script>

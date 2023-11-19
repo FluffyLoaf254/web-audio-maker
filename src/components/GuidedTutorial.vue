@@ -16,7 +16,9 @@ const begin = () => {
   index.value = 0;
   elements.value = window.document.querySelectorAll('[data-tutorial]');
   showing.value = true;
-  current.value.style.boxShadow = '0 0 0 0.7rem white';
+  if (current.value) {
+    current.value.style.boxShadow = '0 0 0 0.7rem white';
+  }
 };
 
 const end = () => {
@@ -24,8 +26,11 @@ const end = () => {
 };
 
 const next = () => {
-  current.value.style.boxShadow = null;
-  if (index.value >= elements.value.length - 1) {
+  if (!current.value) {
+    return;
+  }
+  current.value.style.boxShadow = 'none';
+  if (index.value >= (elements.value?.length ?? 0) - 1) {
     end();
     return;
   } else {
@@ -56,6 +61,6 @@ onUnmounted(() => {
 <template>
   <div v-if="showing" class="z-[200] fixed w-screen h-screen">
     <div class="absolute" style="box-shadow: 0 0 1rem 1rem white, 0 0 0 1000rem rgba(0, 0, 0, 0.3)" :style="boundsStyles"></div>
-    <message-modal :show="showing" :parent="current" @close="next">{{ current.dataset.tutorial }}</message-modal>
+    <message-modal :show="showing" :parent="current" @close="next">{{ current?.dataset.tutorial }}</message-modal>
   </div>
 </template>

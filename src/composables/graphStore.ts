@@ -268,7 +268,7 @@ export const useGraphStore = defineStore('graph', {
     inheritedBeats(state: State) {
       return (node: Node) => {
         let current = [node];
-        while (current.reduce((carry, node) => carry || node.beats, null) == null && current.length != 0) {
+        while (current.reduce<number | null>((carry, node) => carry || node.beats, null) == null && current.length != 0) {
           current = state.json.nodes.filter(childNode => current.some(nestedNode => nestedNode.inputs.some(input => input.node == childNode.id)));
         }
         
