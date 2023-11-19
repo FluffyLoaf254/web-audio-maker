@@ -27,17 +27,14 @@ const end = () => {
 };
 
 const next = () => {
-  if (!current.value) {
-    return;
-  }
-  current.value.classList.remove('tutorial-element-shadow');
+  current.value?.classList.remove('tutorial-element-shadow');
   if (index.value >= (elements.value?.length ?? 0) - 1) {
     end();
     return;
   } else {
     index.value++;
   }
-  current.value.classList.add('tutorial-element-shadow');
+  current.value?.classList.add('tutorial-element-shadow');
 };
 
 defineExpose({
@@ -68,18 +65,18 @@ onUnmounted(() => {
 
 <style>
 .tutorial-shadow {
-  box-shadow: 0 0 1rem 1rem white, 0 0 0 1000rem rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 1rem 1rem white, 0 0 0 1000rem rgba(0, 0, 0, 0.3) !important;
 }
 
 .dark .tutorial-shadow {
-  box-shadow: 0 0 1rem 1rem rgb(51 65 85), 0 0 0 1000rem rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 1rem 1rem rgb(51 65 85), 0 0 0 1000rem rgba(0, 0, 0, 0.3) !important;
 }
 
 .tutorial-element-shadow {
-  box-shadow: 0 0 0 0.7rem white;
+  box-shadow: 0 0 0 0.8rem white !important;
 }
 
 .dark .tutorial-element-shadow {
-  box-shadow: 0 0 0 0.7rem rgb(51 65 85);
+  box-shadow: 0 0 0 0.8rem rgb(51 65 85) !important;
 }
 </style>
