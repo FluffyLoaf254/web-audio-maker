@@ -73,10 +73,10 @@ onUnmounted(() => {
 }
 
 .tutorial-element-shadow {
-  box-shadow: 0 0 0 0.8rem white !important;
+  box-shadow: inset 0 0 0.3rem 0.3rem white, 0 0 0 0.8rem white !important;
 }
 
 .dark .tutorial-element-shadow {
-  box-shadow: 0 0 0 0.8rem rgb(51 65 85) !important;
+  box-shadow: inset 0 0 0.3rem 0.3rem rgb(51, 65, 85), 0 0 0 0.8rem rgb(51 65 85) !important;
 }
 </style>
