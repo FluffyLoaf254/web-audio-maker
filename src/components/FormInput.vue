@@ -18,5 +18,5 @@ defineEmits<Emits>();
 </script>
 
 <template>
-  <input :type="type" :name="name" :id="id" :value="modelValue" @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" class="rounded hover:bg-gray-100 active:bg-gray-200 focus:outline-none focus:ring focus:ring-blue-500 bg-white placeholder:text-gray-400 text-gray-600 py-1 px-2 dark:bg-slate-500 dark:text-gray-200">
+  <input :type="type" :name="name" :id="id" :value="modelValue" @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" class="rounded hover:bg-gray-100 active:bg-gray-200 focus:outline-none focus:ring focus:ring-blue-500 bg-white placeholder:text-gray-400 text-gray-600 py-1 px-2 dark:bg-slate-500 dark:text-gray-200 dark:hover:bg-slate-500 dark:active:bg-slate-400">
 </template>
