@@ -154,9 +154,9 @@ const newObject = (array: Beat[]) => {
         </input-label>
       </div>
     </div>
-    <div class="flex flex-col gap-4" v-else>
+    <div class="text-gray-500 dark:text-gray-400 flex flex-col gap-4" v-else>
       <h3>{{ title }}</h3>
-      <p class="text-gray-500 text-sm italic">This parameter is being driven by another node.</p>
+      <p class="text-sm italic">This parameter is being driven by another node.</p>
     </div>
   </div>
 </template>
