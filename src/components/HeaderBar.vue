@@ -4,7 +4,6 @@ import IconButton from './IconButton.vue';
 import InputLabel from './InputLabel.vue';
 import FormInput from './FormInput.vue';
 import SettingsMenu from './SettingsMenu.vue';
-import { Cog6ToothIcon } from '@heroicons/vue/24/solid';
 
 interface Props {
   bpm: number

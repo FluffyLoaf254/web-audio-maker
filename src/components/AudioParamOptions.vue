@@ -21,6 +21,6 @@ useNodeData(props.id, node, data);
   
 <template>
   <div class="flex flex-col gap-4 p-4">
-    <audio-param v-model="data.output" title="Data" :beats="node?.beats" :min="0" :max="20000" />
+    <audio-param v-model="data.output" title="Data" :beats="node?.beats ?? null" :min="0" :max="20000" />
   </div>
 </template>
