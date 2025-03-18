@@ -7,3 +7,12 @@ This project allows you to create a simple audio graph with the Web Audio API th
 ## Try it Out
 
 You can try out the latest version on GitHub Pages here: [https://fluffyloaf254.github.io/web-audio-maker/](https://fluffyloaf254.github.io/web-audio-maker/)
+
+To run the project locally:
+
+```zsh
+npm install
+npm run dev
+```
+
+You may then visit the given address in your browser to see the project.
