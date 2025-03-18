@@ -1,5 +1,7 @@
 # WebAudioMaker
 
+## About
+
 This project allows you to create a simple audio graph with the Web Audio API though a node-based visual scripting interface.
 
 ![image](https://github.com/FluffyLoaf254/web-audio-maker/assets/21041627/8a49451b-51bb-4bce-9f80-caf7385fe1de)
